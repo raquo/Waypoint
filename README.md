@@ -14,7 +14,7 @@ A **URL** is a well formed web address. The router deals only with URLs from the
 
 A **View** is the content that should be rendered based on current **Page**. Typically it's a Laminar `ReactiveElement`.
 
-A **Page** is an instance of the state that a **Router** can have. It is typically a case class with parameters for a given Route, such as `UserPage(userId: Int)`, or simply `LoginPage`.
+A **Page** represents a specific UI State that a **Route** (and therefore a **Router**) can have. It is typically a case class with parameters matching a given Route, such as `UserPage(userId: Int)`, or simply `LoginPage`.
 
 A **Pattern** is a construct that can extract a tuple of data from **URLs** and compile a URL from a tuple of data. For example, `root / "user" / segment[Int] / endOfSegments`. In Waypoint, patterns are provided by the [URL-DSL](https://github.com/sherpal/url-dsl) library.
 
