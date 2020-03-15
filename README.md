@@ -254,6 +254,6 @@ Nikita Gazarov – [@raquo](https://twitter.com/raquo)
 
 ## License & Credits
 
-Waypoint is provided under the [MIT license](https://github.com/raquo/laminar/blob/master/LICENSE.md).
+Waypoint is provided under the [MIT license](https://github.com/raquo/Waypoint/blob/master/LICENSE.md).
 
 Waypoint uses [URL-DSL](https://github.com/sherpal/url-dsl) for URL matching, also provided under the MIT license.
