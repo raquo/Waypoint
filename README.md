@@ -242,6 +242,14 @@ Suppose you want to "remember" vertical scroll position on a certain page, so th
 
 Pages are serialized into History API state records, so when the user uses browser back button to come back to a page that he's already been to, it's not just the old URL that's restored, it's the whole Page state. On the contrary, if the user reloads the page or clicks a link that causes a page load instead of the History API transition, the Page state will be parsed from the URL, and since the URL does not include scroll position in our case, that will need to be the default scroll position of zero.
 
+```scala
+Route[NotePage, (Int, Int)](
+  encode = page => (page.libraryId, page.noteId), // scroll position is not written into the URL args
+  decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0), // default scroll position that will be inferred from the URL
+  pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments
+)
+```
+
 Remember that you need to actually scroll to the scroll position when loading the page. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position. Treat scroll position as a sort of "uncontrolled input" in React terms, if that makes sense.
 
 Lastly, normally you fire `router.pushState` to update the current page. But in case of updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
