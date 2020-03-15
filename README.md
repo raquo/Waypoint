@@ -4,6 +4,8 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
+    "com.raquo" %%% "waypoint" % "0.1.0"   // Requires Laminar 0.8.0 & URL-DSL 0.2.0
+
 ## Routing Basics
 
 Different libraries use different language to describe the routing problem. The following are high level concepts to get us on the same page (ha!), not specific Scala types.
