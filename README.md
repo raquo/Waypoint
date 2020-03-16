@@ -7,7 +7,7 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
-    "com.raquo" %%% "waypoint" % "0.1.0"   // Requires Laminar 0.8.0 & URL-DSL 0.2.0
+    "com.raquo" %%% "waypoint" % "0.1.0"   // Requires Laminar 0.8.0 & URL DSL 0.2.0
 
 ## Routing Basics
 
@@ -19,7 +19,7 @@ A **View** is the content that should be rendered based on current **Page**. Typ
 
 A **Page** represents a specific UI State that a **Route** (and therefore a **Router**) can have. It is typically a case class with parameters matching a given Route, such as `UserPage(userId: Int)`, or simply `LoginPage`.
 
-A **Pattern** is a construct that can extract a tuple of data from **URLs** and compile a URL from a tuple of data. For example, `root / "user" / segment[Int] / endOfSegments`. In Waypoint, patterns are provided by the [URL-DSL](https://github.com/sherpal/url-dsl) library.
+A **Pattern** is a construct that can extract a tuple of data from **URLs** and compile a URL from a tuple of data. For example, `root / "user" / segment[Int] / endOfSegments`. In Waypoint, patterns are provided by the [URL DSL](https://github.com/sherpal/url-dsl) library.
 
 A **Route** is a class that defines how a class of **Page**s corresponds to a **Pattern**, and how to convert between the two. For example, `Route.static(LoginPage, root / "login" / endOfSegments)`
 
@@ -267,4 +267,4 @@ Nikita Gazarov – [@raquo](https://twitter.com/raquo)
 
 Waypoint is provided under the [MIT license](https://github.com/raquo/Waypoint/blob/master/LICENSE.md).
 
-Waypoint uses [URL-DSL](https://github.com/sherpal/url-dsl) for URL matching, also provided under the MIT license.
+Waypoint uses [URL DSL](https://github.com/sherpal/url-dsl) for URL matching, also provided under the MIT license.
