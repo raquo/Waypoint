@@ -7,7 +7,9 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
-    "com.raquo" %%% "waypoint" % "0.1.0"   // Requires Laminar 0.8.0 & URL DSL 0.2.0
+```scala
+"com.raquo" %%% "waypoint" % "0.1.0"   // Requires Laminar 0.8.0 & URL DSL 0.2.0
+```
 
 ## Routing Basics
 
@@ -43,8 +45,8 @@ implicit val UserPageRW: ReadWriter[UserPage] = macroRW
 implicit val rw: ReadWriter[Page] = macroRW
 
 val userRoute = Route(
-  encode = arg => User(userId = arg),
-  decode = user => user.userId,
+  encode = user => user.userId,
+  decode = arg => User(userId = arg),
   pattern = root / "user" / segment[Int] / endOfSegments
 )
 val loginRoute = Route.static(LoginPage, root / "login" / endOfSegments)
@@ -55,8 +57,8 @@ val router = new Router[Page](
   routes = List(userRoute, loginRoute),
   owner = unsafeWindowOwner, // this router will live as long as the window
   getPageTitle = _.toString, // mock page title (displayed in the browser tab next to favicon)
-  serializePage = page => write(page)(Page.rw), // serialize page data for storage in History API log
-  deserializePage = pageStr => read(pageStr)(Page.rw) // deserialize the above
+  serializePage = page => write(page)(rw), // serialize page data for storage in History API log
+  deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
 )
 ```
 
