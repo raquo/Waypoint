@@ -1,6 +1,7 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
+import com.raquo.laminar.api.L
 import com.raquo.waypoint.fixtures.TestPage._
 import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
 import org.scalatest.Assertion
@@ -25,6 +26,7 @@ class StaticRouteSpec extends UnitSpec {
       origin = origin,
       routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
       owner = testOwner,
+      $popStateEvent = L.windowEvents.onPopState,
       getPageTitle = _.pageTitle,
       serializePage = page => write(page)(TestPage.rw),
       deserializePage = pageStr => read(pageStr)(TestPage.rw)

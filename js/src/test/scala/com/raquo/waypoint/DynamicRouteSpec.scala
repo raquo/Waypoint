@@ -3,6 +3,7 @@ package com.raquo.waypoint
 import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
 import com.raquo.waypoint.fixtures.TestPage._
 import com.raquo.airstream.ownership.Owner
+import com.raquo.laminar.api.L
 import com.raquo.waypoint.fixtures.TestPage.LibraryPage
 import org.scalatest.Assertion
 import upickle.default._
@@ -51,6 +52,7 @@ class DynamicRouteSpec extends UnitSpec {
     origin = origin,
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: workspaceSearchRoute :: Nil,
     owner = testOwner,
+    $popStateEvent = L.windowEvents.onPopState,
     getPageTitle = _.pageTitle,
     serializePage = page => write(page)(TestPage.rw),
     deserializePage = pageStr => read(pageStr)(TestPage.rw)

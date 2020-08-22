@@ -7,9 +7,7 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
-```scala
-"com.raquo" %%% "waypoint" % "0.1.0"   // Requires Laminar 0.8.0 & URL DSL 0.2.0
-```
+    "com.raquo" %%% "waypoint" % "0.2.0"   // Requires Airstream 0.10.0 & URL DSL 0.2.0
 
 ## Routing Basics
 
@@ -33,7 +31,7 @@ A **Router** is a class that provides methods to both set current **Page** and l
 So how do **Views** fit into all of the above? We need to render certain views based on the current page reported by the router. Here's our setup:
 
 ```scala
-import com.raquo.laminar.api.L._
+import com.raquo.laminar.api.L
 import com.raquo.waypoint._
 import upickle.default._
 
@@ -56,6 +54,7 @@ val router = new Router[Page](
   origin = dom.document.location.origin.get,
   routes = List(userRoute, loginRoute),
   owner = unsafeWindowOwner, // this router will live as long as the window
+  $popStateEvent = L.windowEvents.onPopState, // this being a param lets Waypoint avoid an explicit dependency on Laminar
   getPageTitle = _.toString, // mock page title (displayed in the browser tab next to favicon)
   serializePage = page => write(page)(rw), // serialize page data for storage in History API log
   deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
@@ -258,6 +257,13 @@ Route[NotePage, (Int, Int)](
 Remember that you need to actually scroll to the scroll position when loading the page. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position. Treat scroll position as a sort of "uncontrolled input" in React terms, if that makes sense.
 
 Lastly, normally you fire `router.pushState` to update the current page. But in case of updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
+
+
+## Waypoint Without Laminar
+
+Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstream.
+
+All you need to use Waypoint without Laminar is provide a stream of `dom.OnPopState` events, which is very easy, just copy `DomEventStream` from Laminar.
 
 
 ## Author

@@ -1,6 +1,6 @@
 package com.raquo.waypoint
 
-import com.raquo.laminar.api.L._
+import com.raquo.airstream.signal.{Signal, Var}
 
 /** The job of this renderer is to provide Signal[OutPage] => View
   * instead of the more obvious but less efficient Signal[OutPage] => Signal[View]
@@ -12,8 +12,8 @@ sealed class CollectPageSignalRenderer[InPage, OutPage <: InPage, +View] private
   render: Signal[OutPage] => View
 ) extends Renderer[InPage, View] {
 
-  // @TODO[Integrity] Because we don'ot have collect on Signal, this emits events in a different Transaction than the original $page Signal.
-  //  When we have Signal.collect, we should re-implement this in its terms.
+  // @TODO[Integrity] Because we don't have collect on Signal, this emits events in a different Transaction than the original $page Signal.
+  //  If / when we have Signal.collect, we should re-implement this in its terms.
 
   private[this] var signalVar: Var[OutPage] = null
 

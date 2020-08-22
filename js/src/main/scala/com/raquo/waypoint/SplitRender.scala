@@ -1,6 +1,6 @@
 package com.raquo.waypoint
 
-import com.raquo.laminar.api.L._
+import com.raquo.airstream.signal.Signal
 
 import scala.reflect.ClassTag
 

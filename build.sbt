@@ -94,10 +94,11 @@ lazy val waypoint = crossProject(JSPlatform, JVMPlatform).in(file("."))
     requireJsDomEnv in Test := true,
     useYarn := true,
     libraryDependencies ++= Seq(
-      "com.raquo" %%% "laminar" % "0.8.0",
-      "org.scala-js" %%% "scalajs-dom" % "0.9.8"
+      "org.scala-js" %%% "scalajs-dom" % "1.1.0",
+      "com.raquo" %%% "airstream" % "0.10.0",
+      "com.raquo" %%% "laminar" % "0.10.2" % Test,
     )
   )
 
 lazy val waypointJS = waypoint.js
-lazy val waypointJVM = waypoint.jvm
+lazy val waypointJVM = waypoint.jvm // #Note the JVM project exists to provide `Route` class to the backend.

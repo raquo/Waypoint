@@ -1,12 +1,17 @@
 package com.raquo.waypoint
 
-import com.raquo.laminar.api.L._
+import com.raquo.airstream.eventstream.EventStream
+import com.raquo.airstream.ownership.Owner
+import com.raquo.airstream.signal.{StrictSignal, Var}
 import org.scalajs.dom
 
 import scala.util.Try
 
 /**
   * @throws Exception when `initialUrl` does is not absolute or does not fit `origin`
+  *
+  * @param owner typically unsafeWindowOwner in Laminar (if the router should never die, i.e. it's a whole app router)
+  * @param $popStateEvent typically windowEvents.onPopState in Laminar
   *
   * @param initialUrl  typically dom.window.location.href, e.g. "http://localhost:8080/page"
   * @param origin   typically dom.window.location.origin.get e.g. "http://localhost:8080"
@@ -16,6 +21,7 @@ class Router[BasePage](
   origin: String,
   routes: List[Route[_ <: BasePage, _]],
   owner: Owner,
+  $popStateEvent: EventStream[dom.PopStateEvent],
   getPageTitle: BasePage => String,
   serializePage: BasePage => String,
   deserializePage: String => BasePage
@@ -36,13 +42,13 @@ class Router[BasePage](
 
   val $currentPage: StrictSignal[BasePage] = $routeEvent.signal.map { ev =>
     ev
-  }.map(_.page).observe(unsafeWindowOwner)
+  }.map(_.page).observe(owner)
 
   // --
 
   $routeEvent.signal.foreach(handleRouteEvent)(owner)
 
-  windowEvents.onPopState.foreach(handlePopState)(owner)
+  $popStateEvent.foreach(handlePopState)(owner)
 
   // --
 
