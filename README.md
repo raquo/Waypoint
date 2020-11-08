@@ -44,7 +44,7 @@ implicit val rw: ReadWriter[Page] = macroRW
 
 val userRoute = Route(
   encode = user => user.userId,
-  decode = arg => User(userId = arg),
+  decode = arg => UserPage(userId = arg),
   pattern = root / "user" / segment[Int] / endOfSegments
 )
 val loginRoute = Route.static(LoginPage, root / "login" / endOfSegments)
