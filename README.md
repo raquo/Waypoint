@@ -34,6 +34,8 @@ So how do **Views** fit into all of the above? We need to render certain views b
 import com.raquo.laminar.api.L
 import com.raquo.waypoint._
 import upickle.default._
+import org.scalajs.dom
+
 
 sealed trait Page
 case class UserPage(userId: Int) extends Page
@@ -43,8 +45,8 @@ implicit val UserPageRW: ReadWriter[UserPage] = macroRW
 implicit val rw: ReadWriter[Page] = macroRW
 
 val userRoute = Route(
-  encode = user => user.userId,
-  decode = arg => User(userId = arg),
+  encode = userPage => userPage.userId,
+  decode = arg => UserPage(userId = arg),
   pattern = root / "user" / segment[Int] / endOfSegments
 )
 val loginRoute = Route.static(LoginPage, root / "login" / endOfSegments)
@@ -53,7 +55,7 @@ val router = new Router[Page](
   initialUrl = dom.document.location.href, // must be a valid LoginPage or UserPage url
   origin = dom.document.location.origin.get,
   routes = List(userRoute, loginRoute),
-  owner = unsafeWindowOwner, // this router will live as long as the window
+  owner = L.unsafeWindowOwner, // this router will live as long as the window
   $popStateEvent = L.windowEvents.onPopState, // this being a param lets Waypoint avoid an explicit dependency on Laminar
   getPageTitle = _.toString, // mock page title (displayed in the browser tab next to favicon)
   serializePage = page => write(page)(rw), // serialize page data for storage in History API log
