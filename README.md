@@ -23,7 +23,7 @@ A **Pattern** is a construct that can extract a tuple of data from **URLs** and 
 
 A **Route** is a class that defines how a class of **Page**s corresponds to a **Pattern**, and how to convert between the two. For example, `Route.static(LoginPage, root / "login" / endOfSegments)`
 
-A **Router** is a class that provides methods to both set current **Page** and listen to changes of current **Page**. Because router manages the browser's History API, you typically instantiate only one router per `dom.window`.
+A **Router** is a class that provides methods to a) set the current **Page** and b) listen to changes in current **Page**. Because a router manages the browser's History API, you typically instantiate only one router per `dom.window`.
 
 
 ## Rendering Views
@@ -88,7 +88,7 @@ This works, you just need to call `router.pushState(page)` or `router.replaceSta
 
 However, as you know, this rendering is not efficient in Laminar by design. Every time `router.$currentPage` is updated, renderPage is called, creating a whole new element. Not a big deal at all in this toy example, but in the real world it would be re-creating your whole app's DOM tree on every URL change. That is simply unacceptable.
 
-Waypoint provides a convenient but somewhat opinionated helper to solve this problem:
+You can improve the efficiency of this using Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/docs/Documentation.md#performant-children-rendering--split) operator, but this will prove cumbersome if your app has many different Page types. Waypoint provides a convenient but somewhat opinionated helper to solve this problem:
 
 ```scala
 val splitter = SplitRender[Page, HtmlElement](router.$currentPage)
@@ -181,7 +181,7 @@ Note: SplitRender is a construct made only of reactive variables. It does not kn
 
 ## Using Waypoint
 
-URL patterns and the matching functionality is provided by the [URL DSL](https://github.com/sherpal/url-dsl) library. All the methods that you need are defined on the `com.raquo.waypoint` package object, so just import that.
+URL patterns and the matching functionality are provided by the [URL DSL](https://github.com/sherpal/url-dsl) library. All the methods that you need are defined on the `com.raquo.waypoint` package object, so just import that:
 
 ```scala
 import com.raquo.waypoint._
@@ -256,7 +256,7 @@ Route[NotePage, (Int, Int)](
 )
 ```
 
-Remember that you need to actually scroll to the scroll position when loading the page. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position. Treat scroll position as a sort of "uncontrolled input" in React terms, if that makes sense.
+Remember that your code needs to actually scroll to the desired scroll position when loading the page. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position. Treat scroll position as a sort of "uncontrolled input" in React terms, if that makes sense.
 
 Lastly, normally you fire `router.pushState` to update the current page. But in case of updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
 
