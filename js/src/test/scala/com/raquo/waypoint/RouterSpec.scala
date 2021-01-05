@@ -6,6 +6,7 @@ import com.raquo.waypoint.fixtures.TestPage._
 import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
 import org.scalajs.dom
 import upickle.default._
+import urldsl.language.dummyErrorImpl._
 
 class RouterSpec extends UnitSpec {
 

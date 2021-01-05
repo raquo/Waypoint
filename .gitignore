@@ -6,3 +6,5 @@ target/
 js/yarn.lock
 
 .DS_Store
+
+/.bsp
