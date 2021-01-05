@@ -4,8 +4,8 @@ inThisBuild(Seq(
   name := "Waypoint",
   normalizedName := "waypoint",
   organization := "com.raquo",
-  scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.12.10", "2.13.1")
+  scalaVersion := "2.13.4",
+  crossScalaVersions := Seq("2.12.12", "2.13.4")
 ))
 
 // @TODO[WTF] Why can't this be inside releaseSettings?
@@ -39,43 +39,19 @@ lazy val releaseSettings = Seq(
   releasePublishArtifactsAction := PgpKeys.publishSigned.value
 )
 
+val filterScalacOptions = { options: Seq[String] =>
+  options.filterNot(Set(
+    "-Ywarn-value-discard",
+    "-Wvalue-discard"
+  ))
+}
 
-val baseScalacSettings =
-  "-encoding" :: "UTF-8" ::
-    "-unchecked" ::
-    "-deprecation" ::
-    "-explaintypes" ::
-    "-feature" ::
-    "-language:_" ::
-    "-Xfuture" ::
-    "-Xlint" ::
-    "-Yno-adapted-args" ::
-    "-Ywarn-value-discard" ::
-    "-Ywarn-unused" ::
-    Nil
-
-lazy val scalacSettings = Seq(
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 13)) =>
-        baseScalacSettings.diff(
-          "-Xfuture" ::
-            "-Yno-adapted-args" ::
-            "-Ywarn-infer-any" ::
-            "-Ywarn-nullary-override" ::
-            "-Ywarn-nullary-unit" ::
-            Nil
-        )
-      case _ => baseScalacSettings
-    }
-  }
-)
-
-lazy val commonSettings = releaseSettings ++ scalacSettings ++ Seq(
+lazy val commonSettings = releaseSettings ++ Seq(
+  scalacOptions ~= filterScalacOptions,
   libraryDependencies ++= Seq(
-    "be.doeraene" %%% "url-dsl" % "0.2.0",
-    "com.lihaoyi" %%% "upickle" % "1.0.0" % Test,
-    "org.scalatest" %%% "scalatest" % "3.1.1" % Test,
+    "be.doeraene" %%% "url-dsl" % "0.3.2",
+    "com.lihaoyi" %%% "upickle" % "1.2.2" % Test,
+    "org.scalatest" %%% "scalatest" % "3.2.3" % Test,
   )
 )
 
@@ -90,13 +66,15 @@ lazy val waypoint = crossProject(JSPlatform, JVMPlatform).in(file("."))
   .settings(commonSettings)
   .jsConfigure(_.enablePlugins(ScalaJSBundlerPlugin))
   .jsSettings(
-    scalaJSLinkerConfig ~= { _.withSourceMap(false) },
+    scalaJSLinkerConfig ~= {
+      _.withSourceMap(false)
+    },
     requireJsDomEnv in Test := true,
     useYarn := true,
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "1.1.0",
-      "com.raquo" %%% "airstream" % "0.10.0",
-      "com.raquo" %%% "laminar" % "0.10.2" % Test,
+      "com.raquo" %%% "airstream" % "0.11.1",
+      "com.raquo" %%% "laminar" % "0.11.0" % Test,
     )
   )
 

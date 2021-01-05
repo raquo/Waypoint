@@ -2,6 +2,7 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.signal.Signal
 
+import scala.annotation.unused
 import scala.reflect.ClassTag
 
 case class SplitRender[Page, View](
@@ -19,7 +20,7 @@ case class SplitRender[Page, View](
   }
 
   /** Just a convenience method for static pages. `page` is expected to be an `object`. */
-  def collectStatic[P <: Page : ClassTag](page: P)(view: => View): SplitRender[Page, View] = {
+  def collectStatic[P <: Page : ClassTag](@unused page: P)(view: => View): SplitRender[Page, View] = {
     collect[P](_ => view)
   }
 
