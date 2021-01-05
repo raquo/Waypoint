@@ -6,7 +6,7 @@ import com.raquo.waypoint.fixtures.TestPage._
 import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
 import org.scalatest.Assertion
 import upickle.default._
-
+import urldsl.language.dummyErrorImpl._
 import scala.util.{Success, Try}
 
 class StaticRouteSpec extends UnitSpec {
@@ -61,8 +61,6 @@ class StaticRouteSpec extends UnitSpec {
     expectPageRelativeFailure("./")
     expectPageRelativeFailure("./hello/login")
 
-
-
     @inline def urlForPage(page: TestPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     // Routable pages
@@ -82,12 +80,6 @@ class StaticRouteSpec extends UnitSpec {
     def expectPageRelative(url: String, expectedPage: Option[TestPage]): Assertion = {
       withClue("expectPageRelative: " + url + " ? " + expectedPage.toString + "\n") {
         Try(router.pageForRelativeUrl(url)) shouldBe Success(expectedPage)
-      }
-    }
-
-    def expectPageAbsoluteFailure(url: String): Assertion = {
-      withClue("expectPageAbsoluteFailure: " + url + " ? failure\n") {
-        Try(router.pageForAbsoluteUrl(url)).toOption shouldBe None
       }
     }
 
