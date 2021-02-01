@@ -1,6 +1,7 @@
 package com.raquo.waypoint
 
-import com.raquo.airstream.signal.{Signal, Var}
+import com.raquo.airstream.core.Signal
+import com.raquo.airstream.state.Var
 
 /** The job of this renderer is to provide Signal[OutPage] => View
   * instead of the more obvious but less efficient Signal[OutPage] => Signal[View]
