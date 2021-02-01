@@ -1,8 +1,8 @@
 package com.raquo.waypoint
 
-import com.raquo.airstream.eventstream.EventStream
+import com.raquo.airstream.core.EventStream
 import com.raquo.airstream.ownership.Owner
-import com.raquo.airstream.signal.{StrictSignal, Var}
+import com.raquo.airstream.state.{StrictSignal, Var}
 import org.scalajs.dom
 
 import scala.util.Try

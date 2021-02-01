@@ -1,7 +1,6 @@
 package com.raquo.waypoint
 
-import com.raquo.airstream.signal.Signal
-
+import com.raquo.airstream.core.Signal
 import scala.annotation.unused
 import scala.reflect.ClassTag
 
