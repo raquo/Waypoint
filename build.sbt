@@ -50,7 +50,7 @@ lazy val commonSettings = releaseSettings ++ Seq(
   scalacOptions ~= filterScalacOptions,
   libraryDependencies ++= Seq(
     "be.doeraene" %%% "url-dsl" % "0.3.2",
-    "com.lihaoyi" %%% "upickle" % "1.2.2" % Test,
+    "com.lihaoyi" %%% "upickle" % "1.2.3" % Test,
     "org.scalatest" %%% "scalatest" % "3.2.3" % Test,
   )
 )
@@ -73,8 +73,8 @@ lazy val waypoint = crossProject(JSPlatform, JVMPlatform).in(file("."))
     useYarn := true,
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "1.1.0",
-      "com.raquo" %%% "airstream" % "0.11.1",
-      "com.raquo" %%% "laminar" % "0.11.0" % Test,
+      "com.raquo" %%% "airstream" % "0.12.0-M1",
+      "com.raquo" %%% "laminar" % "0.12.0-M1" % Test,
     )
   )
 
