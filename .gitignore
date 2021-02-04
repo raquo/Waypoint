@@ -2,6 +2,10 @@ target/
 .js/
 .jvm/
 .idea
+.metals/
+.vscode/
+.bloop/
+metals.sbt
 
 js/yarn.lock
 

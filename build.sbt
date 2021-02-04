@@ -4,8 +4,8 @@ inThisBuild(Seq(
   name := "Waypoint",
   normalizedName := "waypoint",
   organization := "com.raquo",
-  scalaVersion := "2.13.1",
-  crossScalaVersions := Seq("2.12.10", "2.13.1")
+  scalaVersion := "2.13.4",
+  crossScalaVersions := Seq("2.12.13", "2.13.4")
 ))
 
 // @TODO[WTF] Why can't this be inside releaseSettings?
@@ -73,7 +73,7 @@ lazy val scalacSettings = Seq(
 
 lazy val commonSettings = releaseSettings ++ scalacSettings ++ Seq(
   libraryDependencies ++= Seq(
-    "be.doeraene" %%% "url-dsl" % "0.2.0",
+    "be.doeraene" %%% "url-dsl" % "0.3.2",
     "com.lihaoyi" %%% "upickle" % "1.0.0" % Test,
     "org.scalatest" %%% "scalatest" % "3.1.1" % Test,
   )
@@ -95,8 +95,8 @@ lazy val waypoint = crossProject(JSPlatform, JVMPlatform).in(file("."))
     useYarn := true,
     libraryDependencies ++= Seq(
       "org.scala-js" %%% "scalajs-dom" % "1.1.0",
-      "com.raquo" %%% "airstream" % "0.10.0",
-      "com.raquo" %%% "laminar" % "0.10.2" % Test,
+      "com.raquo" %%% "airstream" % "0.12.0-M1",
+      "com.raquo" %%% "laminar" % "0.12.0-M1" % Test,
     )
   )
 

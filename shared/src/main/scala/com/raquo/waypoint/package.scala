@@ -14,6 +14,13 @@ package object waypoint {
   val root: PathSegment[Unit, DummyError] =
     PathSegment.root
 
+  implicit final def unaryPathSegment[T](
+        t: T
+    )(
+        implicit fromString: FromString[T, DummyError],
+        printer: Printer[T],
+    ): PathSegment[Unit, DummyError] = PathSegment.unaryPathSegment(t)
+
   def segment[Arg](implicit fromString: FromString[Arg, DummyError], printer: Printer[Arg]): PathSegment[Arg, DummyError] =
     PathSegment.segment[Arg, DummyError]
 
