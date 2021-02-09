@@ -35,7 +35,7 @@ case class SplitRender[Page, View](
   }
 
   /** Signal of output elements. Put this in your DOM with:
-    * `child <-- SplitRender($page).collect(...).collectSignal(...).signal`
+    * `child <-- SplitRender(\$page).collect(...).collectSignal(...).signal`
     */
   def $view: Signal[View] = {
     var maybeCurrentRenderer: Option[Renderer[Page, View]] = None

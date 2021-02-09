@@ -23,7 +23,7 @@ lazy val commonSettings = releaseSettings ++ Seq(
   libraryDependencies ++= Seq(
     "be.doeraene" %%% "url-dsl" % "0.3.2",
     "com.lihaoyi" %%% "upickle" % "1.0.0" % Test,
-    "org.scalatest" %%% "scalatest" % "3.2.3" % Test,
+    "org.scalatest" %%% "scalatest" % "3.2.0" % Test,
   ),
   scalacOptions ~= { options: Seq[String] =>
     options.filterNot(Set(
@@ -35,7 +35,10 @@ lazy val commonSettings = releaseSettings ++ Seq(
     options.filterNot { o =>
       o.startsWith("-Ywarn-unused") || o.startsWith("-Wunused")
     }
-  }
+  },
+  scalacOptions in (Compile, doc) ++= Seq(
+    "-no-link-warnings" // Suppress scaladoc "Could not find any member to link for" warnings
+  )
 )
 
 lazy val jsSettings = Seq(
