@@ -8,7 +8,6 @@ import com.raquo.waypoint.fixtures.TestPage.LibraryPage
 import org.scalatest.Assertion
 import upickle.default._
 import urldsl.vocabulary.UrlMatching
-import urldsl.language.dummyErrorImpl._
 import scala.util.{Success, Try}
 
 class DynamicRouteSpec extends UnitSpec {

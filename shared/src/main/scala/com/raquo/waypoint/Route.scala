@@ -29,7 +29,7 @@ class Route[Page, Args] private (
   def pageForAbsoluteUrl(origin: String, url: String): Option[Page] = {
     // @TODO[API] We evaluate the page first, as that will consistently throw in case of malformed URL
     val maybePage = matchRelativeUrl(url).map(decode)
-    if (absoluteUrlMatchesOrigin(origin, url)) {
+    if (Utils.absoluteUrlMatchesOrigin(origin, url)) {
       maybePage
     } else {
       None
@@ -38,7 +38,7 @@ class Route[Page, Args] private (
 
   /** @throws Exception when url is not relative */
   def pageForRelativeUrl(origin: String, url: String): Option[Page] = {
-    if (!isRelative(url)) {
+    if (!Utils.isRelative(url)) {
       throw new Exception("Relative URL must be relative to the origin, i.e. it must start with /")
     }
     matchRelativeUrl(origin + url).map(decode)

@@ -7,7 +7,7 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
-    "com.raquo" %%% "waypoint" % "0.2.0"   // Requires Airstream 0.10.0 & URL DSL 0.2.0
+    "com.raquo" %%% "waypoint" % "0.3.0"   // Requires Airstream 0.12.0 & URL DSL 0.3.2
 
 ## Routing Basics
 
@@ -240,6 +240,13 @@ Each of the above results in a `Route[Page, Args]` with the precise types. You c
 Then you can change the document URL with `router.pushState(newPage)` and `router.replaceState(newPage)`, as well as get URLs for pages with `router.absoluteUrlForPage` and `router.relativeUrlForPage` (e.g. if you want to put that URL in a href attribute). You can even ask the router what Page, if any, matches a given url with `router.pageForAbsoluteUrl` or `router.pageForRelativeUrl`, or react to URL changes by listening to `router.$currentPage` signal (it's a StrictSignal so its current value is always available at `router.$currentPage.now()`).
 
 
+## Router Error Handling
+
+URL-DSL offers several options to report errors. By default, Waypoint uses `DummyError`, i.e. the bare minimum. If you want more details on why your route failed to match, you can use URL-DSL's `Simple*` errors.
+
+To do this, use `import com.raquo.waypoint.simple._` **instead of** `import com.raquo.waypoint._`. You can't have **both** of those imports in scope as they will give you conflicting implicits for URL-DSL error types, so if importing `simple._`, you'll need to import other Waypoint types individually, without a wildcard, e.g. `import com.raquo.waypoint.{Route, Router}`.
+
+
 ## Recipes
 
 #### Pages carrying state not reflected in the URL
@@ -265,7 +272,7 @@ Lastly, normally you fire `router.pushState` to update the current page. But in 
 
 Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstream.
 
-All you need to use Waypoint without Laminar is provide a stream of `dom.OnPopState` events, which is very easy, just copy `DomEventStream` from Laminar.
+All you need to use Waypoint without Laminar is provide a stream of `dom.OnPopState` events, which is very easy, just make one using Airstream's `DomEventStream`.
 
 
 ## Author
