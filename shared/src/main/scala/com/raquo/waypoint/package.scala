@@ -1,60 +1,21 @@
 package com.raquo
 
-import urldsl.errors.{DummyError, PathMatchingError}
-import urldsl.language.{PathSegment, QueryParameters}
-import urldsl.vocabulary.{FromString, Printer}
+import urldsl.errors._
 
 /** This is the public API. Import com.raquo.waypoint or com.raquo.waypoint._ */
-package object waypoint {
+package object waypoint extends Waypoint(
+  DummyError.dummyErrorIsPathMatchingError,
+  DummyError.dummyErrorIsParamMatchingError,
+  DummyError.dummyErrorIsFragmentMatchingError
+) {
 
-  private implicit val error: PathMatchingError[DummyError] = DummyError.dummyErrorIsPathMatchingError
-
-  // type StaticRoute[Page: ClassTag] = Route[Page, Unit]
-
-  val root: PathSegment[Unit, DummyError] =
-    PathSegment.root
-
-  def segment[Arg](implicit fromString: FromString[Arg, DummyError], printer: Printer[Arg]): PathSegment[Arg, DummyError] =
-    PathSegment.segment[Arg, DummyError]
-
-  val remainingSegments: PathSegment[List[String], DummyError] =
-    PathSegment.remainingSegments
-
-  val endOfSegments: PathSegment[Unit, DummyError] =
-    PathSegment.endOfSegments
-
-  //val noMatchSegment: PathSegment[Unit, DummyError] =
-  //  PathSegment.noMatch[DummyError]
-
-  //def oneOf[T](ts: T*)(implicit fromString: FromString[T, DummyError], printer: Printer[T]): PathSegment[Unit, DummyError] =
-  //  PathSegment.oneOf(ts.headOption.getOrElse(throw new Exception("waypoint.oneOf requires a non-empty list")), ts.tail: _*)
-
-  def param[Arg](
-    paramName: String
-  )(implicit
-    fromString: FromString[Arg, DummyError],
-    printer: Printer[Arg]
-  ): QueryParameters[Arg, DummyError] =
-    QueryParameters.param(paramName)
-
-  def listParam[Arg](
-    paramName: String
-  )(implicit
-    fromString: FromString[Arg, DummyError],
-    printer: Printer[Arg]
-  ): QueryParameters[List[Arg], DummyError] =
-    QueryParameters.listParam(paramName)
-
-  //val emptyParams: QueryParameters[Unit, DummyError] =
-  //  QueryParameters.empty[DummyError]
-
-  // @TODO[Security] This is rather ad-hoc. Review later.
-  @inline private[waypoint] def isRelative(url: String): Boolean = {
-    url.startsWith("/") && !url.startsWith("//")
-  }
-
-  // @TODO move?
-  @inline private[waypoint] def absoluteUrlMatchesOrigin(origin: String, url: String): Boolean = {
-    url.startsWith(origin + "/")
-  }
+  /** You can import waypoint.simple._ to use URL-DSl Simple* errors,
+    * but make sure you DO NOT import waypoint._ in this case, otherwise
+    * you will get ambiguous implicits.
+    */
+  lazy val simple: Waypoint[SimplePathMatchingError, SimpleParamMatchingError, SimpleFragmentMatchingError] = new Waypoint(
+    SimplePathMatchingError.pathMatchingError,
+    SimpleParamMatchingError.itIsParamMatchingError,
+    SimpleFragmentMatchingError.itIsFragmentMatchingError
+  )
 }

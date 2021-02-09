@@ -54,7 +54,7 @@ class Router[BasePage](
 
   /** @throws Exception when url is malformed */
   def pageForAbsoluteUrl(url: String): Option[BasePage] = {
-    if (absoluteUrlMatchesOrigin(origin, url)) {
+    if (Utils.absoluteUrlMatchesOrigin(origin, url)) {
       val relativeUrl = url.substring(origin.length)
       pageForRelativeUrl(relativeUrl)
     } else if (url == origin) {
@@ -67,7 +67,7 @@ class Router[BasePage](
 
   /** @throws Exception when url is not relative or is malformed */
   def pageForRelativeUrl(url: String): Option[BasePage] = {
-    if (!isRelative(url)) {
+    if (!Utils.isRelative(url)) {
       throw new Exception("Relative URL must be relative to the origin, i.e. it must start with /")
     }
     var page: Option[BasePage] = None
