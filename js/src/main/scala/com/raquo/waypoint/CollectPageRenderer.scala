@@ -1,6 +1,6 @@
 package com.raquo.waypoint
 
-sealed class CollectPageRenderer[InPage, OutPage <: InPage, +View] private[waypoint](
+sealed class CollectPageRenderer[InPage, OutPage, +View] private[waypoint](
   collectPage: PartialFunction[InPage, OutPage],
   render: OutPage => View
 ) extends Renderer[InPage, View] {

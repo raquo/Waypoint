@@ -34,6 +34,23 @@ case class SplitRender[Page, View](
     copy(renderers = renderers :+ renderer)
   }
 
+  def collectStaticPF[SP](pf: PartialFunction[Page, SP])(render: SP => View): SplitRender[Page, View] = {
+    val renderer = new CollectPageRenderer[Page, SP, View](
+      pf,
+      render
+    )
+
+    copy(renderers = renderers :+ renderer)
+  }
+
+  def collectSignalPF[SP](pf: PartialFunction[Page, SP])(render: Signal[SP] => View): SplitRender[Page, View] = {
+    val renderer = new CollectPageSignalRenderer[Page, SP, View](
+      pf,
+      render
+    )
+    copy(renderers = renderers :+ renderer)
+  }
+
   /** Signal of output elements. Put this in your DOM with:
     * `child <-- SplitRender(\$page).collect(...).collectSignal(...).signal`
     */

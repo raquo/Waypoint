@@ -5,6 +5,8 @@ import com.raquo.waypoint.fixtures.TestPage._
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api.L
 import com.raquo.waypoint.fixtures.TestPage.LibraryPage
+import com.raquo.waypoint.fixtures.InnerPage._
+
 import org.scalatest.Assertion
 import upickle.default._
 import urldsl.vocabulary.UrlMatching
@@ -40,6 +42,30 @@ class DynamicRouteSpec extends UnitSpec {
     pattern = (root / "search" / endOfSegments) ? param[String]("query")
   )
 
+  val innerARoute: Route[OuterPage, Int] = Route.applyPF(
+    decode = arg => OuterPage(InnerAPage(arg)),
+    matchPF = {
+      case OuterPage(InnerAPage(i)) => i
+    },
+    pattern = root / "outer" / "innerA" / segment[Int] / endOfSegments
+  )
+
+  val innerBRoute: Route[OuterPage, String] = Route.onlyQueryPF(
+    decode = arg => OuterPage(InnerBPage(arg)),
+    matchPF = {
+      case OuterPage(InnerBPage(s)) => s
+    },
+    pattern = (root / "outer" / "innerB" / endOfSegments) ? param[String]("str")
+  )
+
+  val innerCRoute: Route[OuterPage, UrlMatching[String, String]] = Route.withQueryPF(
+    decode = arg => OuterPage(InnerCPage(arg.path, arg.params)),
+    matchPF = {
+      case OuterPage(InnerCPage(s, str)) => UrlMatching(s, str)
+    },
+    pattern = (root / "outer" / "innerC" / segment[String] / endOfSegments) ? param[String]("str")
+  )
+
   val workspaceSearchRoute: Route[WorkspaceSearchPage, UrlMatching[String, String]] = Route.withQuery(
     encode = page => UrlMatching(page.workspaceId, page.query),
     decode = args => WorkspaceSearchPage(workspaceId = args.path, query = args.params),
@@ -68,6 +94,11 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/4567", Some(NotePage(libraryId = 1234, noteId = 4567, scrollPosition = 0)))
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/1234", Some(NotePage(libraryId = 1234, noteId = 1234, scrollPosition = 0)))
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/4567?", Some(NotePage(libraryId = 1234, noteId = 4567, scrollPosition = 0)))
+
+    expectPageRelative(innerARoute, origin, "/outer/innerA/1234", Some(OuterPage(InnerAPage(1234))))
+    expectPageRelative(innerBRoute, origin, "/outer/innerB?str=ala", Some(OuterPage(InnerBPage("ala"))))
+    expectPageRelative(innerCRoute, origin, "/outer/innerC/kot?str=ala", Some(OuterPage(InnerCPage("kot", "ala"))))
+
   }
 
   it ("segment routes - parse urls - no match") {
