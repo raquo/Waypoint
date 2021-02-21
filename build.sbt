@@ -49,7 +49,7 @@ lazy val jsSettings = Seq(
   useYarn := true,
   libraryDependencies ++= Seq(
     "org.scala-js" %%% "scalajs-dom" % "1.1.0",
-    "com.raquo" %%% "airstream" % "0.12.0-M2",
+    "com.raquo" %%% "airstream" % "0.12.0-RC1",
     "com.raquo" %%% "laminar" % "0.12.0-M2" % Test,
   )
 )
