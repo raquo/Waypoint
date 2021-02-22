@@ -1,15 +1,14 @@
 package com.raquo.waypoint
 
-import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
-import com.raquo.waypoint.fixtures.TestPage._
+import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api.L
-import com.raquo.waypoint.fixtures.TestPage.LibraryPage
-import com.raquo.waypoint.fixtures.InnerPage._
-
+import com.raquo.waypoint.fixtures.AppPage.DocsSection._
+import com.raquo.waypoint.fixtures.AppPage.LibraryPage
 import org.scalatest.Assertion
 import upickle.default._
-import urldsl.vocabulary.UrlMatching
+
 import scala.util.{Success, Try}
 
 class DynamicRouteSpec extends UnitSpec {
@@ -42,45 +41,64 @@ class DynamicRouteSpec extends UnitSpec {
     pattern = (root / "search" / endOfSegments) ? param[String]("query")
   )
 
-  val innerARoute: Route[OuterPage, Int] = Route.applyPF(
-    decode = arg => OuterPage(InnerAPage(arg)),
-    matchPF = {
-      case OuterPage(InnerAPage(i)) => i
-    },
-    pattern = root / "outer" / "innerA" / segment[Int] / endOfSegments
-  )
-
-  val innerBRoute: Route[OuterPage, String] = Route.onlyQueryPF(
-    decode = arg => OuterPage(InnerBPage(arg)),
-    matchPF = {
-      case OuterPage(InnerBPage(s)) => s
-    },
-    pattern = (root / "outer" / "innerB" / endOfSegments) ? param[String]("str")
-  )
-
-  val innerCRoute: Route[OuterPage, UrlMatching[String, String]] = Route.withQueryPF(
-    decode = arg => OuterPage(InnerCPage(arg.path, arg.params)),
-    matchPF = {
-      case OuterPage(InnerCPage(s, str)) => UrlMatching(s, str)
-    },
-    pattern = (root / "outer" / "innerC" / segment[String] / endOfSegments) ? param[String]("str")
-  )
-
-  val workspaceSearchRoute: Route[WorkspaceSearchPage, UrlMatching[String, String]] = Route.withQuery(
-    encode = page => UrlMatching(page.workspaceId, page.query),
+  val workspaceSearchRoute: Route[WorkspaceSearchPage, PatternArgs[String, String]] = Route.withQuery(
+    encode = page => PatternArgs(page.workspaceId, page.query),
     decode = args => WorkspaceSearchPage(workspaceId = args.path, query = args.params),
     pattern = (root / "workspace" / segment[String] / endOfSegments) ? param[String]("query")
   )
 
-  val router = new Router[TestPage](
+  // partial function match routes
+
+  val bigNumRoute: Route[DocsPage, Int] = Route.applyPF(
+    matchEncode = { case DocsPage(NumPage(i)) if i > 100 => i },
+    decode = { case arg if arg > 100 => DocsPage(NumPage(arg)) },
+    pattern = root / "docs" / "num" / segment[Int] / endOfSegments
+  )
+
+  val negNumRoute: Route[DocsPage, Int] = Route.applyPF(
+    matchEncode = { case DocsPage(NumPage(i)) if i < 0 => i },
+    decode = { case arg if arg < 0 => DocsPage(NumPage(arg)) },
+    pattern = root / "docs" / "num" / segment[Int] / endOfSegments
+  )
+
+  val zeroNumRoute: Route[DocsPage, Int] = Route.applyPF(
+    matchEncode = { case DocsPage(NumPage(i)) if i == 0 => i },
+    decode = { case arg if arg == 0 => DocsPage(NumPage(arg)) },
+    pattern = root / "docs" / "zero" / segment[Int] / endOfSegments
+  )
+
+  val exampleRoute: Route[DocsPage, String] = Route.onlyQueryPF(
+    matchEncode = { case DocsPage(ExamplePage(s)) => s },
+    decode = args => DocsPage(ExamplePage(args)),
+    pattern = (root / "docs" / "example" / endOfSegments) ? param[String]("name")
+  )
+
+  val componentRoute: Route[DocsPage, PatternArgs[String, String]] = Route.withQueryPF(
+    matchEncode = { case DocsPage(ComponentPage(s, str)) => PatternArgs(s, str) },
+    decode = args => DocsPage(ComponentPage(args.path, args.params)),
+    pattern = (root / "docs" / "component" / segment[String] / endOfSegments) ? param[String]("group")
+  )
+
+  val router = new Router[AppPage](
     initialUrl = origin + "/app/library/700",
     origin = origin,
-    routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: workspaceSearchRoute :: Nil,
+    routes = List(
+      libraryRoute,
+      textRoute,
+      noteRoute,
+      searchRoute,
+      workspaceSearchRoute,
+      bigNumRoute,
+      negNumRoute,
+      zeroNumRoute,
+      exampleRoute,
+      componentRoute
+    ),
     owner = testOwner,
     $popStateEvent = L.windowEvents.onPopState,
     getPageTitle = _.pageTitle,
-    serializePage = page => write(page)(TestPage.rw),
-    deserializePage = pageStr => read(pageStr)(TestPage.rw)
+    serializePage = page => write(page)(AppPage.rw),
+    deserializePage = pageStr => read(pageStr)(AppPage.rw)
   )
 
   it ("segment routes - parse urls - match") {
@@ -95,10 +113,16 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/1234", Some(NotePage(libraryId = 1234, noteId = 1234, scrollPosition = 0)))
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/4567?", Some(NotePage(libraryId = 1234, noteId = 4567, scrollPosition = 0)))
 
-    expectPageRelative(innerARoute, origin, "/outer/innerA/1234", Some(OuterPage(InnerAPage(1234))))
-    expectPageRelative(innerBRoute, origin, "/outer/innerB?str=ala", Some(OuterPage(InnerBPage("ala"))))
-    expectPageRelative(innerCRoute, origin, "/outer/innerC/kot?str=ala", Some(OuterPage(InnerCPage("kot", "ala"))))
-
+    expectPageRelative(bigNumRoute, origin, "/docs/num/1234", Some(DocsPage(NumPage(1234))))
+    expectPageRelative(bigNumRoute, origin, "/docs/num/50", None)
+    expectPageRelative(bigNumRoute, origin, "/docs/num/-1234", None)
+    expectPageRelative(negNumRoute, origin, "/docs/num/-1234", Some(DocsPage(NumPage(-1234))))
+    expectPageRelative(negNumRoute, origin, "/docs/num/1234", None)
+    expectPageRelative(zeroNumRoute, origin, "/docs/zero/1234", None)
+    expectPageRelative(zeroNumRoute, origin, "/docs/zero/-1234", None)
+    expectPageRelative(zeroNumRoute, origin, "/docs/zero/0", Some(DocsPage(NumPage(0))))
+    expectPageRelative(exampleRoute, origin, "/docs/example?name=ala", Some(DocsPage(ExamplePage("ala"))))
+    expectPageRelative(componentRoute, origin, "/docs/component/kot?group=ala", Some(DocsPage(ComponentPage(name = "kot", group = "ala"))))
   }
 
   it ("segment routes - parse urls - no match") {
@@ -173,7 +197,7 @@ class DynamicRouteSpec extends UnitSpec {
 
   it ("segment routes - generate urls") {
 
-    @inline def urlForPage(page: TestPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
+    @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(LibraryPage(700)) shouldBe Some("/app/library/700")
     urlForPage(NotePage(libraryId = 100, noteId = 200, scrollPosition = 5)) shouldBe Some("/app/library/100/note/200")
@@ -182,7 +206,7 @@ class DynamicRouteSpec extends UnitSpec {
   }
 
   it ("query routes - generate urls") {
-    @inline def urlForPage(page: TestPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
+    @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(SearchPage("hello")) shouldBe Some("/search?query=hello")
     urlForPage(SearchPage("hello world")) shouldBe Some("/search?query=hello%20world")
@@ -191,7 +215,7 @@ class DynamicRouteSpec extends UnitSpec {
   }
 
   it ("combined routes - generate urls") {
-    @inline def urlForPage(page: TestPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
+    @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(WorkspaceSearchPage("1234", "hello")) shouldBe Some("/workspace/1234?query=hello")
     urlForPage(WorkspaceSearchPage("1234", "hello world")) shouldBe Some("/workspace/1234?query=hello%20world")
@@ -200,13 +224,22 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(WorkspaceSearchPage("", "hello")) shouldBe Some("/workspace?query=hello") // @TODO[API] This is not correct, we can't parse this back into the same page
   }
 
-  def expectPageAbsolute(route: Route[_, _], origin: String, url: String, expectedPage: Option[TestPage]): Assertion = {
+  it ("partial routes - generate urls") {
+    @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
+
+    urlForPage(DocsPage(NumPage(123))) shouldBe Some("/docs/num/123")
+    urlForPage(DocsPage(NumPage(-123))) shouldBe Some("/docs/num/-123")
+    urlForPage(DocsPage(NumPage(0))) shouldBe Some("/docs/zero/0")
+    urlForPage(DocsPage(NumPage(50))) shouldBe None
+  }
+
+  def expectPageAbsolute(route: Route[_, _], origin: String, url: String, expectedPage: Option[AppPage]): Assertion = {
     withClue("expectPageAbsolute: " + url + " ? " + expectedPage.toString + "\n") {
       Try(route.pageForAbsoluteUrl(origin, url)) shouldBe Success(expectedPage)
     }
   }
 
-  def expectPageRelative(route: Route[_, _], origin: String, url: String, expectedPage: Option[TestPage]): Assertion = {
+  def expectPageRelative(route: Route[_, _], origin: String, url: String, expectedPage: Option[AppPage]): Assertion = {
     withClue("expectPageRelative: " + url + " ? " + expectedPage.toString + "\n") {
       Try(route.pageForRelativeUrl(origin, url)) shouldBe Success(expectedPage)
     }
