@@ -11,10 +11,7 @@ case class SplitRender[Page, View](
 
   /** Add a standard renderer for Page type */
   def collect[P <: Page : ClassTag](render: P => View): SplitRender[Page, View] = {
-    val renderer = new CollectPageRenderer[Page, P, View](
-      { case p: P => p },
-      render
-    )
+    val renderer = new CollectPageRenderer[Page, View]({ case p: P => render(p) })
     copy(renderers = renderers :+ renderer)
   }
 
@@ -23,14 +20,21 @@ case class SplitRender[Page, View](
     collect[P](_ => view)
   }
 
+  // @TODO[Naming] This is really the PF equivalent of collectStatic, right...?
+  def collectStaticPF(render: PartialFunction[Page, View]): SplitRender[Page, View] = {
+    val renderer = new CollectPageRenderer[Page, View](render)
+    copy(renderers = renderers :+ renderer)
+  }
+
   /** This renderer is efficient. It creates only a single element (instance of Out)
     * that takes Signal[P] as a parameter instead of creating a Signal of elements.
     */
   def collectSignal[P <: Page : ClassTag](render: Signal[P] => View): SplitRender[Page, View] = {
-    val renderer = new CollectPageSignalRenderer[Page, P, View](
-      { case p: P => p },
-      render
-    )
+    collectSignalPF({ case p: P => p })(render)
+  }
+
+  def collectSignalPF[P](pf: PartialFunction[Page, P])(render: Signal[P] => View): SplitRender[Page, View] = {
+    val renderer = new CollectPageSignalRenderer[Page, P, View](pf, render)
     copy(renderers = renderers :+ renderer)
   }
 

@@ -9,12 +9,10 @@ import scala.util.Try
 
 /**
   * @throws Exception when `initialUrl` does is not absolute or does not fit `origin`
-  *
-  * @param owner typically unsafeWindowOwner in Laminar (if the router should never die, i.e. it's a whole app router)
-  * @param \$popStateEvent typically windowEvents.onPopState in Laminar
-  *
-  * @param initialUrl  typically dom.window.location.href, e.g. "http://localhost:8080/page"
-  * @param origin   typically dom.window.location.origin.get e.g. "http://localhost:8080"
+  * @param owner      typically unsafeWindowOwner in Laminar (if the router should never die, i.e. it's a whole app router)
+  * @param \          $popStateEvent typically windowEvents.onPopState in Laminar
+  * @param initialUrl typically dom.window.location.href, e.g. "http://localhost:8080/page"
+  * @param origin     typically dom.window.location.origin.get e.g. "http://localhost:8080"
   */
 class Router[BasePage](
   initialUrl: String,

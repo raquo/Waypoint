@@ -2,8 +2,8 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api.L
-import com.raquo.waypoint.fixtures.TestPage._
-import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage._
+import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import org.scalatest.Assertion
 import upickle.default._
 import scala.util.{Success, Try}
@@ -20,15 +20,15 @@ class StaticRouteSpec extends UnitSpec {
     val loginRoute = Route.static(LoginPage, root / "hello" / "login" / endOfSegments)
     val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-    val router = new Router[TestPage](
+    val router = new Router[AppPage](
       initialUrl = "http://localhost:8080/",
       origin = origin,
       routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
       owner = testOwner,
       $popStateEvent = L.windowEvents.onPopState,
       getPageTitle = _.pageTitle,
-      serializePage = page => write(page)(TestPage.rw),
-      deserializePage = pageStr => read(pageStr)(TestPage.rw)
+      serializePage = page => write(page)(AppPage.rw),
+      deserializePage = pageStr => read(pageStr)(AppPage.rw)
     )
 
     expectPageRelative("/hello/login", Some(LoginPage))
@@ -60,7 +60,7 @@ class StaticRouteSpec extends UnitSpec {
     expectPageRelativeFailure("./")
     expectPageRelativeFailure("./hello/login")
 
-    @inline def urlForPage(page: TestPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
+    @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     // Routable pages
     urlForPage(LoginPage) shouldBe Some("/hello/login")
@@ -70,13 +70,13 @@ class StaticRouteSpec extends UnitSpec {
     // Non routable page
     urlForPage(WorkspacePage("123")) shouldBe None
 
-    def expectPageAbsolute(url: String, expectedPage: Option[TestPage]): Assertion = {
+    def expectPageAbsolute(url: String, expectedPage: Option[AppPage]): Assertion = {
       withClue("expectPageAbsolute: " + url + " ? " + expectedPage.toString + "\n") {
         Try(router.pageForAbsoluteUrl(url)) shouldBe Success(expectedPage)
       }
     }
 
-    def expectPageRelative(url: String, expectedPage: Option[TestPage]): Assertion = {
+    def expectPageRelative(url: String, expectedPage: Option[AppPage]): Assertion = {
       withClue("expectPageRelative: " + url + " ? " + expectedPage.toString + "\n") {
         Try(router.pageForRelativeUrl(url)) shouldBe Success(expectedPage)
       }

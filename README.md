@@ -9,6 +9,8 @@ This is an early but functional version. While Laminar itself is quite polished,
 
     "com.raquo" %%% "waypoint" % "0.3.0"   // Requires Airstream 0.12.0 & URL DSL 0.3.2
 
+
+
 ## Routing Basics
 
 Different libraries use different language to describe the routing problem. The following are high level concepts to get us on the same page (ha!), not specific Scala types.
@@ -21,9 +23,10 @@ A **Page** represents a specific UI State that a **Route** (and therefore a **Ro
 
 A **Pattern** is a construct that can extract a tuple of data from **URLs** and compile a URL from a tuple of data. For example, `root / "user" / segment[Int] / endOfSegments`. In Waypoint, patterns are provided by the [URL DSL](https://github.com/sherpal/url-dsl) library.
 
-A **Route** is a class that defines how a class of **Page**s corresponds to a **Pattern**, and how to convert between the two. For example, `Route.static(LoginPage, root / "login" / endOfSegments)`
+A **Route** is a class that defines how a class of **Page**s corresponds to a **Pattern**, and how to convert between the two. For example, `Route.static(LoginPage, root / "login" / endOfSegments)`. Routes may be partial, i.e. match only a subset of the Pages in the class.
 
 A **Router** is a class that provides methods to a) set the current **Page** and b) listen to changes in current **Page**. Because a router manages the browser's History API, you typically instantiate only one router per `dom.window`.
+
 
 
 ## Rendering Views
@@ -117,6 +120,7 @@ In the previous, "naive" example, we were creating a new div element every time 
 And this is exactly what `SplitRender.collectSignal` lets you do: it provides you a refined `Signal[UserPage]` instead of `Signal[Page]`, and it's trivial to build a single div that uses that `$userPage` signal like we do.
 
 
+
 ## Page Hierarchy
 
 SplitRender's `collect` and `collectSignal` use Scala's [ClassTag](https://medium.com/@sinisalouc/overcoming-type-erasure-in-scala-8f2422070d20) to refine the general `Page` type into more specialized `UserPage`. You need to understand the limitations of ClassTag: it is only able to differentiate top level types, so in general your page types should not have type params, or if they do, you should know the limitations on matching those types with ClassTag.
@@ -177,6 +181,7 @@ One reason for nesting splitters like this could be to avoid re-rendering a comm
 SplitRender offers several methods: `collect`, `collectSignal` and `collectStatic`, use the ones that make more sense for your pages. Mixing them is fine of course.
 
 Note: SplitRender is a construct made only of reactive variables. It does not know anything about routing, what the current URL is, etc. You give it a signal of `A` and a way to refine that into `B`, and you get a signal of `B` with `$view`.
+
 
 
 ## Using Waypoint
@@ -240,11 +245,44 @@ Each of the above results in a `Route[Page, Args]` with the precise types. You c
 Then you can change the document URL with `router.pushState(newPage)` and `router.replaceState(newPage)`, as well as get URLs for pages with `router.absoluteUrlForPage` and `router.relativeUrlForPage` (e.g. if you want to put that URL in a href attribute). You can even ask the router what Page, if any, matches a given url with `router.pageForAbsoluteUrl` or `router.pageForRelativeUrl`, or react to URL changes by listening to `router.$currentPage` signal (it's a StrictSignal so its current value is always available at `router.$currentPage.now()`).
 
 
+
+## Routing Extras
+
+
+### Partial Routes
+
+Waypoint's API design is centered around matching pages by ClassTag, but under the hood we just use partial functions. So, you can create routes like this too, and yes, they can actually be partial, i.e. cover only a subset of the page type. For example, here is a route that matches pages only for big numbers.  
+
+```scala
+Route.applyPF[DocsPage, Int](
+  matchEncode = { case DocsPage(NumPage(i)) if i > 100 => i },
+  decode = { case arg if arg > 100 => DocsPage(NumPage(arg)) },
+  pattern = root / "docs" / "num" / segment[Int] / endOfSegments
+)
+```
+
+When using partial matchers you need to be careful that the "partiality" of `matchEncode` and `decode` is symmetric, otherwise you might end up with a route that can parse a page from a URL but can't encode that same page into a URL (or vice versa).
+
+
+### ContextRouteBuilder 
+
+Imagine your web app has many routes with the same query params. For example, your Laminar web app might have a documentation section where every route is expected to have a "lang" query param to indicate the selected "language" and a "version" param to indicate the product version (unrealistic doc standards, I know).
+
+You could add these two params to every page type that needs them and to every route for those page types, but that could be annoying. So instead, you can create a ContextRouteBuilder which will let you specify the necessary types / conversions / patterns only once.
+
+To achieve this, ContextRouteBuilder introduces the concept of Bundle, which is basically a... bundle of (Page, Context), where Page is the usual Waypoint Page, and Context is a data structure that contains all the shared query params, such as "language" and "version" in our example.
+
+See example usage in tests, specifically ContextRouteBuilderSpec.
+
+
+
+
 ## Router Error Handling
 
 URL-DSL offers several options to report errors. By default, Waypoint uses `DummyError`, i.e. the bare minimum. If you want more details on why your route failed to match, you can use URL-DSL's `Simple*` errors.
 
 To do this, use `import com.raquo.waypoint.simple._` **instead of** `import com.raquo.waypoint._`. You can't have **both** of those imports in scope as they will give you conflicting implicits for URL-DSL error types, so if importing `simple._`, you'll need to import other Waypoint types individually, without a wildcard, e.g. `import com.raquo.waypoint.{Route, Router}`.
+
 
 
 ## Recipes
@@ -268,6 +306,7 @@ Remember that your code needs to actually scroll to the desired scroll position 
 Lastly, normally you fire `router.pushState` to update the current page. But in case of updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
 
 
+
 ## Waypoint Without Laminar
 
 Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstream.
@@ -275,9 +314,11 @@ Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstr
 All you need to use Waypoint without Laminar is provide a stream of `dom.OnPopState` events, which is very easy, just make one using Airstream's `DomEventStream`.
 
 
+
 ## Author
 
 Nikita Gazarov – [@raquo](https://twitter.com/raquo)
+
 
 
 ## License & Credits
