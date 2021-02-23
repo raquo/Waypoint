@@ -80,7 +80,7 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
           val ctxArgs = encodeContext(ctx)
           PatternArgs(path = pageArgs, params = ctxArgs)
       }
-      matchBundle.andThen(matchPageEncodeBundle)
+      Utils.andThenPF(matchBundle, matchPageEncodeBundle)
     },
 
     decode = { case bundleArgs =>
@@ -109,7 +109,7 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
           val ctxArgs = encodeContext(ctx)
           (pageArgs, ctxArgs)
       }
-      matchBundle.andThen(matchPageEncodeBundle)
+      Utils.andThenPF(matchBundle, matchPageEncodeBundle)
     },
 
     decode = {
@@ -142,7 +142,7 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
             params = (pageArgs.params, ctxArgs)
           )
       }
-      matchBundle.andThen(matchPageEncodePage)
+      Utils.andThenPF(matchBundle, matchPageEncodePage)
     },
 
     decode = { case bundleArgs =>

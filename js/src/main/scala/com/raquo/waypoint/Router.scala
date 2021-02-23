@@ -30,12 +30,12 @@ import scala.util.Try
   *                              none of the routes match on initial page load.
   *                              When rendering a fallback page, the URL will stay the same.
   *                              If you want to perform any logic (such as redirects) in case of this fallback,
-  *                              put it in the renderer (whatever you have responding to router.$currentPage).
+  *                              put it in the renderer (whatever you have responding to router.\$currentPage).
   *
   * @param deserializeFallback - receives raw state from History API as input and returns a page to render when
   *                              the entry in the history can not be deserialized using [[deserializePage]].
   *                              If you want to perform any logic (such as redirects) in case of this fallback,
-  *                              put it in the renderer (whatever you have responding to router.$currentPage).
+  *                              put it in the renderer (whatever you have responding to router.\$currentPage).
   *
   * @param \$popStateEvent     - typically windowEvents.onPopState in Laminar
   *
@@ -175,7 +175,7 @@ class Router[BasePage](
     routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = true, fromPopState = false)))
   }
 
-  /** Forces router.$currentPage to emit this page without updating the URL or touching the history records.
+  /** Forces router.\$currentPage to emit this page without updating the URL or touching the history records.
     *
     * Use this to display a full screen "not found" page when the route matched but is invalid
     * for example because /user/123 refers to a non-existing user, something that you can't
