@@ -55,14 +55,13 @@ val userRoute = Route(
 val loginRoute = Route.static(LoginPage, root / "login" / endOfSegments)
 
 val router = new Router[Page](
-  initialUrl = dom.document.location.href, // must be a valid LoginPage or UserPage url
-  origin = dom.document.location.origin.get,
   routes = List(userRoute, loginRoute),
-  owner = L.unsafeWindowOwner, // this router will live as long as the window
-  $popStateEvent = L.windowEvents.onPopState, // this being a param lets Waypoint avoid an explicit dependency on Laminar
   getPageTitle = _.toString, // mock page title (displayed in the browser tab next to favicon)
   serializePage = page => write(page)(rw), // serialize page data for storage in History API log
   deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
+)(
+  $popStateEvent = L.windowEvents.onPopState, // this is how Waypoint avoids an explicit dependency on Laminar
+  owner = L.unsafeWindowOwner, // this router will live as long as the window
 )
 ```
 
@@ -277,11 +276,30 @@ See example usage in tests, specifically ContextRouteBuilderSpec.
 
 
 
-## Router Error Handling
+## Error Handling
 
-URL-DSL offers several options to report errors. By default, Waypoint uses `DummyError`, i.e. the bare minimum. If you want more details on why your route failed to match, you can use URL-DSL's `Simple*` errors.
 
-To do this, use `import com.raquo.waypoint.simple._` **instead of** `import com.raquo.waypoint._`. You can't have **both** of those imports in scope as they will give you conflicting implicits for URL-DSL error types, so if importing `simple._`, you'll need to import other Waypoint types individually, without a wildcard, e.g. `import com.raquo.waypoint.{Route, Router}`.
+### Failing to Match Routes
+
+If none of the routes match on initial page load, you can still render a page using `routeFallback` constructor param. The URL will not be updated, but `router.$currentPage` will emit the resulting page. If routeFallback throws, which is the default behaviour, `router.$currentPage` will be put into error state. If you want to throw for logging purposes, but don't want this to happen, return the current page and throw inside a setTimeout.
+
+Similarly, if during user's navigation we encounter a History API state record that `deserializePage` throws on, you can handle it using `deserializeFallback`. It throws too by default, with the same effect as `routeFallback`.
+
+`router.$currentPage` can also be in an errored state if the initial URL does not match the origin. Both of those are taken from `dom.window.location` by default so this shouldn't be an issue.
+
+
+### Rendering Error Pages
+
+`routeFallback` is useful to catch complete garbage URLs that match none of the routes, but you also want more refined control over invalid parameters.
+
+For example, imagine you're matching a route like `/user/<userId>`. When the matching happens you don't know whether a user with `<userId>` actually exists, you will only know that after an asynchronous delay. So, your `userRoute` should successfully match this path, rendering an element that makes an AJAX request for this user's info on mount. Some milliseconds later when the AJAX response comes in you can either proceed to render the user or trigger a failure if AJAX resulted in an error. More specifically:
+
+* You could call `router.forcePage(NotFoundPage(title, comment))` to force the router to emit the provided page without updating the URL (although document title will be updated unless the page's title is not empty). This pattern is useful to show a full page error screen without redirecting the user to a different URL or messing with the navigation history.
+
+* You could call `router.pushState` or `router.replaceState` to render a different page with a redirect. Sometimes this is required, but for UX purposes you should avoid redirecting users to useless URLs like `/404` because this prevents the user from manually fixing the URL in the address bar. A `pushState` redirect can also interfere with the user's ability to use the browser back button.
+  
+So, `router.forcePage` is often the preferred way.
+
 
 
 

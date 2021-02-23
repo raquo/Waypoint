@@ -179,7 +179,7 @@ object Route {
   ): Route[Page, Unit] = {
     new Route[Page, Unit](
       matchEncodePF = { case p if p == staticPage => () },
-      decodePF = _ => staticPage,
+      decodePF = { case _ => staticPage },
       createRelativeUrl = args => "/" + pattern.createPath(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption
     )

@@ -19,9 +19,9 @@ package object waypoint extends Waypoint(
     * but make sure you DO NOT import waypoint._ in this case, otherwise
     * you will get ambiguous implicits.
     */
-  lazy val simple: Waypoint[SimplePathMatchingError, SimpleParamMatchingError, SimpleFragmentMatchingError] = new Waypoint(
-    SimplePathMatchingError.pathMatchingError,
-    SimpleParamMatchingError.itIsParamMatchingError,
-    SimpleFragmentMatchingError.itIsFragmentMatchingError
-  )
+  //lazy val simple: Waypoint[SimplePathMatchingError, SimpleParamMatchingError, SimpleFragmentMatchingError] = new Waypoint(
+  //  SimplePathMatchingError.pathMatchingError,
+  //  SimpleParamMatchingError.itIsParamMatchingError,
+  //  SimpleFragmentMatchingError.itIsFragmentMatchingError
+  //)
 }
