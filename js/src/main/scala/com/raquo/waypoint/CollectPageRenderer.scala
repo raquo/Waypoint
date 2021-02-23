@@ -1,12 +1,16 @@
 package com.raquo.waypoint
 
-sealed class CollectPageRenderer[InPage, OutPage <: InPage, +View] private[waypoint](
-  collectPage: PartialFunction[InPage, OutPage],
-  render: OutPage => View
-) extends Renderer[InPage, View] {
+/** @param matchRender - match the page and render it.
+  *                      This partial function should only be defined for pages that this rendered can render.
+  */
+sealed class CollectPageRenderer[Page, +View] private[waypoint](
+  matchRender: PartialFunction[Page, View]
+) extends Renderer[Page, View] {
 
-  override def render(rawNextPage: InPage): Option[View] = {
-    collectPage.andThen[Option[OutPage]](Some(_)).applyOrElse(rawNextPage, (_: InPage) => None).map(render)
+  override def render(rawNextPage: Page): Option[View] = {
+    matchRender
+      .andThen[Option[View]](Some(_))
+      .applyOrElse(rawNextPage, (_: Page) => None)
   }
 
   override def discard(): Unit = ()

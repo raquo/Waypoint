@@ -2,8 +2,8 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api.L
-import com.raquo.waypoint.fixtures.TestPage._
-import com.raquo.waypoint.fixtures.{TestPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage._
+import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import org.scalajs.dom
 import upickle.default._
 
@@ -39,15 +39,15 @@ class RouterSpec extends UnitSpec {
 
   private val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-  def makeRouter = new Router[TestPage](
+  def makeRouter = new Router[AppPage](
     initialUrl = "http://localhost/app/library/700",
     origin = "http://localhost", // dom.window.location.origin.get
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
     owner = testOwner,
     $popStateEvent = L.windowEvents.onPopState,
     getPageTitle = _.toString,
-    serializePage = page => write(page)(TestPage.rw),
-    deserializePage = pageStr => read(pageStr)(TestPage.rw)
+    serializePage = page => write(page)(AppPage.rw),
+    deserializePage = pageStr => read(pageStr)(AppPage.rw)
   )
 
   it("basic history operation") {
