@@ -14,21 +14,20 @@ class StaticRouteSpec extends UnitSpec {
 
   it("matches simple url") {
 
-    val origin = "http://localhost:8080"
-
     val webHomeRoute = Route.static(HomePage, root / endOfSegments)
     val loginRoute = Route.static(LoginPage, root / "hello" / "login" / endOfSegments)
     val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
     val router = new Router[AppPage](
-      initialUrl = "http://localhost:8080/",
-      origin = origin,
       routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
-      owner = testOwner,
-      $popStateEvent = L.windowEvents.onPopState,
       getPageTitle = _.pageTitle,
       serializePage = page => write(page)(AppPage.rw),
       deserializePage = pageStr => read(pageStr)(AppPage.rw)
+    )(
+      $popStateEvent = L.windowEvents.onPopState,
+      owner = testOwner,
+      origin = "http://localhost:8080",
+      initialUrl = "http://localhost:8080/"
     )
 
     expectPageRelative("/hello/login", Some(LoginPage))

@@ -40,14 +40,15 @@ class RouterSpec extends UnitSpec {
   private val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
   def makeRouter = new Router[AppPage](
-    initialUrl = "http://localhost/app/library/700",
-    origin = "http://localhost", // dom.window.location.origin.get
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
-    owner = testOwner,
-    $popStateEvent = L.windowEvents.onPopState,
     getPageTitle = _.toString,
     serializePage = page => write(page)(AppPage.rw),
     deserializePage = pageStr => read(pageStr)(AppPage.rw)
+  )(
+    $popStateEvent = L.windowEvents.onPopState,
+    owner = testOwner,
+    initialUrl = "http://localhost/app/library/700",
+    origin = "http://localhost"
   )
 
   it("basic history operation") {

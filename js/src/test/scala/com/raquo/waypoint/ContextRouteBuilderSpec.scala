@@ -50,14 +50,15 @@ class ContextRouteBuilderSpec extends UnitSpec {
   private val signupRoute = RouteWithContext.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
   def makeRouter = new Router[PageBundle](
-    initialUrl = "http://localhost/app/library/700",
-    origin = "http://localhost", // dom.window.location.origin.get
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
-    owner = testOwner,
-    $popStateEvent = L.windowEvents.onPopState,
     getPageTitle = _.toString,
     serializePage = page => write(page)(PageBundle.rw),
     deserializePage = pageStr => read(pageStr)(PageBundle.rw)
+  )(
+    $popStateEvent = L.windowEvents.onPopState,
+    owner = testOwner,
+    origin = "http://localhost", // dom.window.location.origin.get
+    initialUrl = "http://localhost/app/library/700"
   )
 
   private def makePageUpdater[A](

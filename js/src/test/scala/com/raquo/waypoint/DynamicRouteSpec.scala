@@ -69,19 +69,17 @@ class DynamicRouteSpec extends UnitSpec {
 
   val exampleRoute: Route[DocsPage, String] = Route.onlyQueryPF(
     matchEncode = { case DocsPage(ExamplePage(s)) => s },
-    decode = args => DocsPage(ExamplePage(args)),
+    decode = { case args => DocsPage(ExamplePage(args)) },
     pattern = (root / "docs" / "example" / endOfSegments) ? param[String]("name")
   )
 
   val componentRoute: Route[DocsPage, PatternArgs[String, String]] = Route.withQueryPF(
     matchEncode = { case DocsPage(ComponentPage(s, str)) => PatternArgs(s, str) },
-    decode = args => DocsPage(ComponentPage(args.path, args.params)),
+    decode = { case args => DocsPage(ComponentPage(args.path, args.params)) },
     pattern = (root / "docs" / "component" / segment[String] / endOfSegments) ? param[String]("group")
   )
 
   val router = new Router[AppPage](
-    initialUrl = origin + "/app/library/700",
-    origin = origin,
     routes = List(
       libraryRoute,
       textRoute,
@@ -94,11 +92,14 @@ class DynamicRouteSpec extends UnitSpec {
       exampleRoute,
       componentRoute
     ),
-    owner = testOwner,
-    $popStateEvent = L.windowEvents.onPopState,
     getPageTitle = _.pageTitle,
     serializePage = page => write(page)(AppPage.rw),
     deserializePage = pageStr => read(pageStr)(AppPage.rw)
+  )(
+    $popStateEvent = L.windowEvents.onPopState,
+    owner = testOwner,
+    origin = origin,
+    initialUrl = origin + "/app/library/700"
   )
 
   it ("segment routes - parse urls - match") {
