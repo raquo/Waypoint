@@ -241,6 +241,7 @@ object Router {
     * Waypoint itself uses the result of `serializePage` which is a string.
     */
   private val throwOnInvalidState = (state: Any) => {
-    throw new Exception("Unable to deserialize history state: " + JSON.stringify(state.asInstanceOf[js.Any]))
+    // @TODO `null` is needed to work around https://github.com/lampepfl/dotty/issues/11943, drop it later
+    throw new Exception("Unable to deserialize history state: " + JSON.stringify(state.asInstanceOf[js.Any], null))
   }
 }

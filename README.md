@@ -202,8 +202,11 @@ root / "user" / segment[Int] / endOfSegments
 // this matches urls like /workspace/123/subsection/info into (Int, String)
 root / "workspace" / segment[Int] / "subsection" / segment[String] / endOfSegments
 
-// this matches urls like /workspace/123?query=hello&mode=1
-(root / "workspace" / segment[Int] / endOfSegments) ? (param[String]("query") & param[Int]("mode"))
+// this matches urls like:
+//   /workspace/123?query=hello
+//   /workspace/123?query=hello&mode=1 
+// note the `.?` invocation on the `mode` param: this means it's optional, modelled as Option[Int]
+(root / "workspace" / segment[Int] / endOfSegments) ? (param[String]("query") & param[Int]("mode").?)
 ```
 
 How to use such patterns to build routes:

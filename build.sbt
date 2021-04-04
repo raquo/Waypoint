@@ -21,37 +21,42 @@ lazy val waypointJVM = waypoint.jvm // #Note the JVM project exists to provide `
 
 lazy val commonSettings = releaseSettings ++ Seq(
   libraryDependencies ++= Seq(
-    "be.doeraene" %%% "url-dsl" % "0.3.2",
-    "com.lihaoyi" %%% "upickle" % "1.0.0" % Test,
-    "org.scalatest" %%% "scalatest" % "3.2.0" % Test,
+    "be.doeraene" %%% "url-dsl" % Versions.UrlDsl,
+    "com.lihaoyi" %%% "upickle" % Versions.Upickle % Test,
+    "org.scalatest" %%% "scalatest" % Versions.ScalaTest % Test,
   ),
-  scalacOptions ~= { options: Seq[String] =>
-    options.filterNot(Set(
-      "-Ywarn-value-discard",
-      "-Wvalue-discard"
-    ))
-  },
-  scalacOptions in Test ~= { options: Seq[String] =>
+  scalacOptions ++= Seq(
+    "-deprecation",
+    "-feature",
+    "-language:higherKinds",
+    "-language:implicitConversions"
+  ),
+  (Test / scalacOptions) ~= { options: Seq[String] =>
     options.filterNot { o =>
       o.startsWith("-Ywarn-unused") || o.startsWith("-Wunused")
     }
   },
-  scalacOptions in (Compile, doc) ++= Seq(
+  (Compile / doc / scalacOptions) ++= Seq(
     "-no-link-warnings" // Suppress scaladoc "Could not find any member to link for" warnings
   )
 )
 
 lazy val jsSettings = Seq(
-  scalaJSLinkerConfig ~= {
-    _.withSourceMap(false)
-  },
-  requireJsDomEnv in Test := true,
-  useYarn := true,
   libraryDependencies ++= Seq(
-    "org.scala-js" %%% "scalajs-dom" % "1.1.0",
-    "com.raquo" %%% "airstream" % "0.12.0-RC1",
-    "com.raquo" %%% "laminar" % "0.12.0-M2" % Test,
-  )
+    ("org.scala-js" %%% "scalajs-dom" % Versions.ScalaJsDom).withDottyCompat(scalaVersion.value),
+    "com.raquo" %%% "airstream" % Versions.Airstream,
+    "com.raquo" %%% "laminar" % Versions.Laminar % Test,
+  ),
+  scalacOptions += {
+    val localSourcesPath = baseDirectory.value.toURI
+    val remoteSourcesPath = s"https://raw.githubusercontent.com/raquo/Waypoint/${git.gitHeadCommit.value.get}/"
+    val sourcesOptionName = if (scalaVersion.value.startsWith("2.")) "-P:scalajs:mapSourceURI" else "-scalajs-mapSourceURI"
+
+    s"${sourcesOptionName}:$localSourcesPath->$remoteSourcesPath"
+  },
+  scalaJSLinkerConfig ~= { _.withSourceMap(false) },
+  (Test / requireJsDomEnv) := true,
+  useYarn := true
 )
 
 
@@ -61,8 +66,8 @@ lazy val releaseSettings = Seq(
   name := "Waypoint",
   normalizedName := "waypoint",
   organization := "com.raquo",
-  scalaVersion := "2.13.4",
-  crossScalaVersions := Seq("2.12.12", "2.13.4"),
+  scalaVersion := Versions.Scala_2_13,
+  crossScalaVersions := Seq(Versions.Scala_3_RC2, Versions.Scala_2_13, Versions.Scala_2_12),
   homepage := Some(url("https://github.com/raquo/waypoint")),
   licenses += ("MIT", url("https://github.com/raquo/waypoint/blob/master/LICENSE.md")),
   scmInfo := Some(
@@ -81,7 +86,7 @@ lazy val releaseSettings = Seq(
   ),
   sonatypeProfileName := "com.raquo",
   publishMavenStyle := true,
-  publishArtifact in Test := false,
+  (Test / publishArtifact) := false,
   publishTo := sonatypePublishToBundle.value,
   releaseCrossBuild := true,
   pomIncludeRepository := { _ => false },
@@ -111,7 +116,7 @@ releaseProcess := {
 }
 
 val noPublish = Seq(
-  skip in publish := true,
-  skip in publishLocal := true,
+  (publish / skip) := true,
+  (publishLocal / skip) := true,
   publishTo := Some(Resolver.file("Unused transient repository", file("target/unusedrepo")))
 )
