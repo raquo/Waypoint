@@ -240,6 +240,12 @@ Route.onlyQuery[SearchPage, String](
   decode = arg => SearchPage(query = arg),
   pattern = (root / "search" / endOfSegments) ? (param[String]("query"))
 )
+
+Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
+  encode = page => FragmentPatternArgs(path = page.page, query = (), fragment = page.section),
+  decode = args => BigLegalPage(page = args.path, section = args.fragment),
+  pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String]
+)
 ```
 
 Each of the above results in a `Route[Page, Args]` with the precise types. You can ask these routes to parse `argsFromPage`, get `relativeUrlForPage`, `pageForAbsoluteUrl`, or `pageForRelativeUrl`. But normally you would build a Router like we did in [Rendering Views](#rendering-views), passing it a list of all the routes you created.

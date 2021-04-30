@@ -15,6 +15,10 @@ object AppPage {
   case class WorkspaceSearchPage(workspaceId: String, query: String) extends AppPage
   case class TextPage(text: String) extends AppPage
 
+  case class LegalPage(section: String) extends AppPage
+  case class BigLegalPage(page: String, section: String) extends AppPage
+  case class HugeLegalPage(page: String, version: Int, section: String) extends AppPage
+
   case object LoginPage extends AppPage
   case object SignupPage extends AppPage
   case object HomePage extends AppPage
@@ -42,6 +46,9 @@ object AppPage {
   implicit val SearchPageRW: ReadWriter[SearchPage] = macroRW
   implicit val WorkspaceSearchPageRW: ReadWriter[WorkspaceSearchPage] = macroRW
   implicit val TextPageRW: ReadWriter[TextPage] = macroRW
+  implicit val legalPageRW: ReadWriter[LegalPage] = macroRW
+  implicit val bigLegalPageRW: ReadWriter[BigLegalPage] = macroRW
+  implicit val hugeLegalPageRW: ReadWriter[HugeLegalPage] = macroRW
 
   implicit val rw: ReadWriter[AppPage] = macroRW
 }

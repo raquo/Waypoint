@@ -1,7 +1,8 @@
 package com.raquo.waypoint
 
 import urldsl.errors.DummyError
-import urldsl.language.{PathSegment, PathSegmentWithQueryParams}
+import urldsl.language.{PathQueryFragmentRepr, PathSegment, PathSegmentWithQueryParams}
+import urldsl.vocabulary.PathQueryFragmentMatching
 
 import scala.reflect.ClassTag
 
@@ -66,6 +67,9 @@ class Route[Page, Args] private(
 }
 
 object Route {
+
+  // @TODO[URL-DSL] We need better abstractions, like Args[P, Q, F] and UrlPart[P, Q, F].
+  //  All these builders should not have such bespoke implementations.
 
   /** Create a route with path segments only */
   def apply[Page: ClassTag, Args](
@@ -137,7 +141,7 @@ object Route {
     )
   }
 
-  /** Create a route with page data encoded in both path segments and query params */
+  /** Create a route with page data encoded in path segments and query params */
   def withQuery[Page: ClassTag, PathArgs, QueryArgs](
     encode: Page => PatternArgs[PathArgs, QueryArgs],
     decode: PatternArgs[PathArgs, QueryArgs] => Page,
@@ -150,7 +154,7 @@ object Route {
     )
   }
 
-  /** Create a partial route with page data encoded in both path segments and query params
+  /** Create a partial route with page data encoded in path segments and query params
     *
     * In this version you can match only a subset of the Page type.
     * Make sure that the partiality of `matchEncode` mirrors that of
@@ -168,6 +172,155 @@ object Route {
       matchEncodePF = matchEncode,
       decodePF = decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption
+    )
+  }
+
+  /** Create a route with page data encoded in query params only */
+  def onlyFragment[Page: ClassTag, FragmentArgs](
+    encode: Page => FragmentArgs,
+    decode: FragmentArgs => Page,
+    pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentArgs] = {
+    onlyFragmentPF(
+      matchEncode = matchPageByClassTag[Page, FragmentArgs](encode),
+      decode = { case args => decode(args) },
+      pattern = pattern
+    )
+  }
+
+  /** Create a partial route with page data encoded in query params only
+    *
+    * In this version you can match only a subset of the Page type.
+    * Make sure that the partiality of `matchEncode` mirrors that of
+    * `decode`, otherwise you'll have a route that can match a page
+    * but can not produce a url for that page (or vice versa).
+    *
+    * @param matchEncode - convert a Page into args. `Any` because it can be called with pages of other routes.
+    */
+  def onlyFragmentPF[Page, FragmentArgs](
+    matchEncode: PartialFunction[Any, FragmentArgs],
+    decode: PartialFunction[FragmentArgs, Page],
+    pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentArgs] = {
+    new Route(
+      matchEncodePF = matchEncode,
+      decodePF = decode,
+      createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment)
+    )
+  }
+
+  /** Create a route with page data encoded in path segments and fragment */
+  def withFragment[Page: ClassTag, PathArgs, FragmentArgs](
+    encode: Page => FragmentPatternArgs[PathArgs, Unit, FragmentArgs],
+    decode: FragmentPatternArgs[PathArgs, Unit, FragmentArgs] => Page,
+    pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = {
+    withFragmentPF(
+      matchEncode = matchPageByClassTag[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]](encode),
+      decode = { case args => decode(args) },
+      pattern = pattern
+    )
+  }
+
+  /** Create a partial route with page data encoded in path segments and fragment
+    *
+    * In this version you can match only a subset of the Page type.
+    * Make sure that the partiality of `matchEncode` mirrors that of
+    * `decode`, otherwise you'll have a route that can match a page
+    * but can not produce a url for that page (or vice versa).
+    *
+    * @param matchEncode - convert a Page into args. `Any` because it can be called with pages of other routes.
+    */
+  def withFragmentPF[Page, PathArgs, FragmentArgs](
+    matchEncode: PartialFunction[Any, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]],
+    decode: PartialFunction[FragmentPatternArgs[PathArgs, Unit, FragmentArgs], Page],
+    pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = {
+    new Route(
+      matchEncodePF = matchEncode,
+      decodePF = decode,
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption
+    )
+  }
+
+  /** Create a route with page data encoded in query params and fragment */
+  def onlyQueryAndFragment[Page: ClassTag, QueryArgs, FragmentArgs](
+    encode: Page => FragmentPatternArgs[Unit, QueryArgs, FragmentArgs],
+    decode: FragmentPatternArgs[Unit, QueryArgs, FragmentArgs] => Page,
+    pattern: PathQueryFragmentRepr[Unit, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]] = {
+    onlyQueryAndFragmentPF(
+      matchEncode = matchPageByClassTag[Page, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]](encode),
+      decode = { case args => decode(args) },
+      pattern = pattern
+    )
+  }
+
+  /** Create a partial route with page data encoded in query params and fragment
+    *
+    * In this version you can match only a subset of the Page type.
+    * Make sure that the partiality of `matchEncode` mirrors that of
+    * `decode`, otherwise you'll have a route that can match a page
+    * but can not produce a url for that page (or vice versa).
+    *
+    * @param matchEncode - convert a Page into args. `Any` because it can be called with pages of other routes.
+    */
+  def onlyQueryAndFragmentPF[Page, QueryArgs, FragmentArgs](
+    matchEncode: PartialFunction[Any, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]],
+    decode: PartialFunction[FragmentPatternArgs[Unit, QueryArgs, FragmentArgs], Page],
+    pattern: PathQueryFragmentRepr[Unit, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]] = {
+    new Route(
+      matchEncodePF = matchEncode,
+      decodePF = decode,
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption
+    )
+  }
+
+  /** Create a route with page data encoded in path segments, query params and fragment */
+  def withQueryAndFragment[Page: ClassTag, PathArgs, QueryArgs, FragmentArgs](
+    encode: Page => FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs],
+    decode: FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs] => Page,
+    pattern: PathQueryFragmentRepr[PathArgs, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]] = {
+    withQueryAndFragmentPF(
+      matchEncode = matchPageByClassTag[Page, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]](encode),
+      decode = { case args => decode(args) },
+      pattern = pattern
+    )
+  }
+
+  /** Create a partial route with page data encoded in path segments, query params and fragment
+    *
+    * In this version you can match only a subset of the Page type.
+    * Make sure that the partiality of `matchEncode` mirrors that of
+    * `decode`, otherwise you'll have a route that can match a page
+    * but can not produce a url for that page (or vice versa).
+    *
+    * @param matchEncode - convert a Page into args. `Any` because it can be called with pages of other routes.
+    */
+  def withQueryAndFragmentPF[Page, PathArgs, QueryArgs, FragmentArgs](
+    matchEncode: PartialFunction[Any, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]],
+    decode: PartialFunction[FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs], Page],
+    pattern: PathQueryFragmentRepr[PathArgs, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError]
+  ): Route[Page, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]] = {
+    new Route(
+      matchEncodePF = matchEncode,
+      decodePF = decode,
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption
     )
   }

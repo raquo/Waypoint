@@ -202,6 +202,8 @@ class Router[BasePage](
     )
   }
 
+  // @TODO[API] I think we'll benefit from some kind of replacePageTitle method
+  //  - Rethink API a bit. Do we want page title to be part of Page?
   private def handleRouteEvent(ev: RouteEvent[BasePage]): Unit = {
     if (!ev.fromPopState) {
       if (ev.replace) {
@@ -211,7 +213,7 @@ class Router[BasePage](
       }
     }
     // 1) Browsers don't currently support the `title` argument in pushState / replaceState
-    // 2) We need to set the title when popping state too
+    // 2) We set the title when popping state too
     dom.document.title = ev.pageTitle
   }
 
