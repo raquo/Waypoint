@@ -47,6 +47,24 @@ class DynamicRouteSpec extends UnitSpec {
     pattern = (root / "workspace" / segment[String] / endOfSegments) ? param[String]("query")
   )
 
+  val legalRoute: Route[LegalPage, String] = Route.onlyFragment(
+    encode = page => page.section,
+    decode = arg => LegalPage(arg),
+    pattern = (root / "legal" / endOfSegments) withFragment fragment[String]
+  )
+
+  val bigLegalRoute: Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
+    encode = page => FragmentPatternArgs(path = page.page, (), fragment = page.section),
+    decode = args => BigLegalPage(page = args.path, section = args.fragment),
+    pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String]
+  )
+
+  val hugeLegalRoute: Route[HugeLegalPage, FragmentPatternArgs[String, Int, String]] = Route.withQueryAndFragment(
+    encode = page => FragmentPatternArgs(path = page.page, query = page.version, fragment = page.section),
+    decode = args => HugeLegalPage(page = args.path, version = args.query, section = args.fragment),
+    pattern = (root / "legal" / segment[String] / endOfSegments) ? param[Int]("version") withFragment fragment[String]
+  )
+
   // partial function match routes
 
   val bigNumRoute: Route[DocsPage, Int] = Route.applyPF(
@@ -86,6 +104,9 @@ class DynamicRouteSpec extends UnitSpec {
       noteRoute,
       searchRoute,
       workspaceSearchRoute,
+      legalRoute,
+      bigLegalRoute,
+      hugeLegalRoute,
       bigNumRoute,
       negNumRoute,
       zeroNumRoute,
@@ -196,6 +217,22 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/?query=sugar", None)
   }
 
+  it ("fragment routes - parse urls") {
+    expectPageRelative(legalRoute, origin, "/legal#foreword", Some(LegalPage(section = "foreword")))
+    expectPageRelative(legalRoute, origin, "/legal/#foreword", Some(LegalPage(section = "foreword")))
+    //expectPageRelative(legalRoute, origin, "/legal#fore%20word", Some(LegalPage(section = "fore word"))) // @TODO[URL-DSL]
+    expectPageRelative(legalRoute, origin, "/legal#fore word", Some(LegalPage(section = "fore word")))
+    expectPageRelative(legalRoute, origin, "/legal#", None)
+    expectPageRelative(legalRoute, origin, "/legal", None)
+
+    expectPageRelative(bigLegalRoute, origin, "/legal/privacy#thirdparty", Some(BigLegalPage(page = "privacy", section = "thirdparty")))
+    expectPageRelative(bigLegalRoute, origin, "/legal/privacy#", None)
+    expectPageRelative(bigLegalRoute, origin, "/legal/privacy", None)
+
+    expectPageRelative(hugeLegalRoute, origin, "/legal/notices?version=123#ca", Some(HugeLegalPage(page = "notices", version = 123, section = "ca")))
+    expectPageRelative(hugeLegalRoute, origin, "/legal/notices#", None)
+  }
+
   it ("segment routes - generate urls") {
 
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
@@ -223,6 +260,18 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(WorkspaceSearchPage("1234", "")) shouldBe Some("/workspace/1234?query=") // @TODO[API] We can't parse this URL tho
     urlForPage(WorkspaceSearchPage("1234", "")) shouldBe Some("/workspace/1234?query=") // @TODO[API] We can't parse this URL tho
     urlForPage(WorkspaceSearchPage("", "hello")) shouldBe Some("/workspace?query=hello") // @TODO[API] This is not correct, we can't parse this back into the same page
+  }
+
+  it ("fragment routes - generate urls") {
+
+    @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
+
+    urlForPage(LegalPage(section = "foreword")) shouldBe Some("/legal#foreword")
+    urlForPage(LegalPage(section = "fore word")) shouldBe Some("/legal#fore%20word")
+
+    urlForPage(BigLegalPage(page = "privacy", section = "thirdparty")) shouldBe Some("/legal/privacy#thirdparty")
+
+    urlForPage(HugeLegalPage(page = "privacy", version = 123, section = "thirdparty")) shouldBe Some("/legal/privacy?version=123#thirdparty")
   }
 
   it ("partial routes - generate urls") {

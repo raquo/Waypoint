@@ -4,6 +4,10 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v0.4.0 – May 2021
+
+* New: Basic route helpers to match URL fragments (text after `#`)
+
 #### v0.3.0 – Feb 2021
 
 * **New: Routes can match types partially now (thanks, [@pbuszka](https://github.com/pbuszka)!)**
