@@ -61,7 +61,7 @@ val router = new Router[Page](
   deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
 )(
   $popStateEvent = L.windowEvents.onPopState, // this is how Waypoint avoids an explicit dependency on Laminar
-  owner = L.unsafeWindowOwner, // this router will live as long as the window
+  owner = L.unsafeWindowOwner // this router will live as long as the window
 )
 ```
 
@@ -350,6 +350,65 @@ Route[NotePage, (Int, Int)](
 Remember that your code needs to actually scroll to the desired scroll position when loading the page. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position. Treat scroll position as a sort of "uncontrolled input" in React terms, if that makes sense.
 
 Lastly, normally you fire `router.pushState` to update the current page. But in case of updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
+
+
+#### Configuring your web server
+
+Unless you're using `Route.fragmentBasePath` (see above) to make put all your routes in the fragment of the URL, like `/#/foo/bar`, you need to ensure that your web server responds to all your Waypoint routes with the HTML file that will load your Scala.js bundle and thus the Waypoint application. Basically, if your frontend thinks that it's responsible for handling the route `example.com/foo/bar`, you better make sure that your backend will load that frontend if the user enters `example.com/foo/bar` in the address bar.
+
+The easiest way to accomplish this is to put all or most of your Waypoint routes behind a prefix like `/app`. You can use `basePath` for this, or just start all your routes at `val appRoot = root / "app"`. Then on the backend you will tell the server to match anything under `/app` to your frontend.
+
+You can keep a few pages like `/login` outside of the `app` world, but then you'll need to hardcode them in your backend routes as well.
+
+Using a catch-all route on the backend is an option too, but that is likely to interfere with 404 error behaviour, so it's not recommended without a prefix like `/app`.
+
+Note that you can put Waypoint's `Route` in `shared`, so if you were so inclined, you could write an integration with your web server framework to evaluate Waypoint's routes on the backend. See the implementation of `Router#pageForAbsoluteUrl`, it's pretty simple.
+
+
+#### Responding to link clicks
+
+Normally when navigating on the internet, users click on `<a href="url">` links, and the browser navigates them to `url`. This results in the target page being loaded from scratch, which is fine for content sites but is slow and inefficient for interactive, single page application (SPA) sites.
+
+So when the user clicks a link in a single page application, you want to hijack that click – prevent the default browser action, and instead use Waypoint to `pushState` the new page. This will update the URL but instead of loading a new page from the web server, `router.$currentPage` will emit a new page, and your application will respond to that without network overhead.
+
+In Laminar that can be achieved with a simple set of modifiers:
+
+```scala
+a(
+  onClick.preventDefault --> (_ => router.pushState(page)),
+  href := router.absoluteUrlForPage(page)
+)
+```
+
+However, this is not good enough. For instance, what if the user ctrl-clicks, wanting to open the page in a new tab? Our code above will break the user's expectations, updating the content of the current page instead of opening a new tab. We need to be smarter. Long story short, we need something like this:
+
+```scala
+def navigateTo(page: BasePage): Binder[HtmlElement] = Binder { el =>
+
+  val isLinkElement = el.ref.isInstanceOf[dom.html.Anchor]
+
+  if (isLinkElement) {
+    el.amend(href(router.absoluteUrlForPage(page)))
+  }
+  
+  // If element is a link and user is holding a modifier while clicking:
+  //  - Do nothing, browser will open the URL in new tab / window / etc. depending on the modifier key
+  // Otherwise:
+  //  - Perform regular pushState transition
+  (onClick
+    .filter(ev => !(isLinkElement && (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey)))
+    .preventDefault
+    --> (_ => router.pushState(page))
+  ).bind(el)
+}
+```
+
+Then you can use this modifier on any link or other element safely:
+
+```scala
+a(navigateTo(libraryPage), "Library") // sets `href` and conditional `onClick`
+button(navigateTo(logoutPage), "Log out") // sets unconditional `onClick` only
+```
 
 
 
