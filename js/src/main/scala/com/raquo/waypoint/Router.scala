@@ -213,7 +213,7 @@ class Router[BasePage](
       }
     }
     // 1) Browsers don't currently support the `title` argument in pushState / replaceState
-    // 2) We set the title when popping state too
+    // 2) We need to set the title when popping state too
     dom.document.title = ev.pageTitle
   }
 

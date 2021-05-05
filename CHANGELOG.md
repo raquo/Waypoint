@@ -22,7 +22,7 @@ _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / 
 * API: Use `PatternArgs` alias for URL DSL's `UlrMatching` type
 * **Build: Update `Airstream` to `0.12.0`**
 * **Build: Update [`url-dsl`](https://github.com/sherpal/url-dsl) to `0.3.2`**
-  * See [URL-DSL migration notes](https://github.com/sherpal/url-dsl#moving-from-020-to-03x)
+  * See [URL DSL migration notes](https://github.com/sherpal/url-dsl#moving-from-020-to-03x)
   * Note: in Waypoint, the required imports stay the same.
 * Build: Update `sbt` to `1.4.7`
 

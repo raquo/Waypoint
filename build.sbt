@@ -23,7 +23,7 @@ lazy val commonSettings = releaseSettings ++ Seq(
   libraryDependencies ++= Seq(
     "be.doeraene" %%% "url-dsl" % Versions.UrlDsl,
     "com.lihaoyi" %%% "upickle" % Versions.Upickle % Test,
-    "org.scalatest" %%% "scalatest" % Versions.ScalaTest % Test,
+    "org.scalatest" %%% "scalatest" % (if (scalaVersion.value == Versions.Scala_3_RC2) "3.2.7" else "3.2.8") % Test,
   ),
   scalacOptions ++= Seq(
     "-deprecation",
