@@ -283,6 +283,25 @@ To achieve this, ContextRouteBuilder introduces the concept of Bundle, which is 
 See example usage in tests, specifically ContextRouteBuilderSpec.
 
 
+### Base Path and Fragment Routes
+
+If you want your single page application navigation to work on fragments, i.e. use URLs like `example.com/#/foo/bar` instead of `example.com/#/foo/bar`, you can do this by providing `bathPath = Route.fragmentBasePath` to your Route constructor.
+
+Typically you will want to do this for every one of your Routes, but the Waypoint API is flexible to allow only a subset of Routes to be fragment routes.
+
+Why would you want this? Using path segments like `/foo/bar` without fragment routes requires the cooperation of the web server. Not needing that is useful when:
+
+* Using a simple static site host like Github pages that doesn't provide a catch-all feature
+* Embedding live examples of router applications with [mdoc](https://github.com/scalameta/mdoc)
+* Developing locally without a web server, by looking at a `file:///` URL
+
+When hosting your static site you might not be able to have a server respond to any route you want, you might be limited to just one url per html file on viewing a `file:///` URL in the browser without a web server
+
+As the name implies, aside from fragments, a Route's `basePath` can contain any path. It could be `/foo/bar/index.html#` or even just `/foo/bar`. If set, it must have a leading slash.
+
+For the record, `basePath` is included in the route's `relativeUrl` as far as Waypoint's public methods are concerned.
+
+Note that URL DSL offers a basic way to match the fragment string in the URL (everything after `#`) – see one of the examples above. Waypoint's `basePath` feature is different in that it lets you use standard non-fragment matching of URL DSL segments, query params, etc. on the fragment string.
 
 
 ## Error Handling

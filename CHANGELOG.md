@@ -6,6 +6,8 @@ _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / 
 
 #### v0.4.0 – May 2021
 
+* New: Base path and fragment matching
+  * You can now match routes like `/#/note/123` instead of `/note/123` by providing `basePath = Route.fragmentBasePath` to Route constructors
 * New: Basic route helpers to match URL fragments (text after `#`)
 
 #### v0.3.0 – Feb 2021
