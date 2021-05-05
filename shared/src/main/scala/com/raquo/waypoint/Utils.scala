@@ -11,6 +11,23 @@ object Utils {
     url.startsWith(origin + "/")
   }
 
+  // #Note This is different from basePath.endsWith("#") in case of multiple `#`
+  private[waypoint] def basePathHasEmptyFragment(basePath: String): Boolean = {
+    basePath.nonEmpty && {
+      val hashIndex = basePath.indexOf('#')
+      hashIndex == basePath.length - 1
+    }
+  }
+
+  private[waypoint] def basePathWithoutFragment(basePath: String): String = {
+    if (basePath.isEmpty) {
+      basePath
+    } else {
+      val hashIndex = basePath.indexOf('#')
+      basePath.substring(0, hashIndex)
+    }
+  }
+
   // @TODO[Scala3] The isDefinedOf method of pf1.andThen(pf2) is broken in Scala 2.12, it does not consider pf2.isDefinedOf
   //  - This is fixed in Scala 2.13, but until then we provide an implementation similar to 2.13 (with the same tests as in scala/scala)
   //  - https://github.com/scala/scala/pull/7263

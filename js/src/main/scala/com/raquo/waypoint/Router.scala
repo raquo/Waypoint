@@ -129,7 +129,7 @@ class Router[BasePage](
   /** @throws Exception when url is not relative or is malformed */
   def pageForRelativeUrl(url: String): Option[BasePage] = {
     if (!Utils.isRelative(url)) {
-      throw new Exception("Relative URL must be relative to the origin, i.e. it must start with /")
+      throw new Exception("Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
     }
     var page: Option[BasePage] = None
     routes.exists { route =>

@@ -56,11 +56,13 @@ class Route[Page, Args] private(
     */
   def pageForRelativeUrl(origin: String, url: String): Option[Page] = {
     if (!Utils.isRelative(url)) {
-      throw new Exception("Relative URL must be relative to the origin, i.e. it must start with /")
+      throw new Exception(s"Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
     }
     if (url.startsWith(basePath)) {
       val urlWithoutBasePath = url.substring(basePath.length)
       matchRelativeUrl(origin + urlWithoutBasePath).flatMap(decode)
+    } else if (Utils.basePathHasEmptyFragment(basePath) && url == Utils.basePathWithoutFragment(basePath)) {
+      matchRelativeUrl(origin).flatMap(decode)
     } else {
       None
     }
