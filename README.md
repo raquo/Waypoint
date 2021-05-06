@@ -285,7 +285,7 @@ See example usage in tests, specifically ContextRouteBuilderSpec.
 
 ### Base Path and Fragment Routes
 
-If you want your single page application navigation to work on fragments, i.e. use URLs like `example.com/#/foo/bar` instead of `example.com/#/foo/bar`, you can do this by providing `bathPath = Route.fragmentBasePath` to your Route constructor.
+If you want your single page application navigation to work on fragments, i.e. use URLs like `example.com/#/foo/bar` instead of `example.com/#/foo/bar`, you can do this by providing `basePath = Route.fragmentBasePath` to your Route constructor.
 
 Typically you will want to do this for every one of your Routes, but the Waypoint API is flexible to allow only a subset of Routes to be fragment routes.
 
@@ -293,7 +293,7 @@ Why would you want this? Using path segments like `/foo/bar` without fragment ro
 
 * Using a simple static site host like Github pages that doesn't provide a catch-all feature
 * Embedding live examples of router applications with [mdoc](https://github.com/scalameta/mdoc)
-* Developing locally without a web server, by looking at a `file:///` URL
+* Developing locally without a web server, by looking at a `file:///` URL (in this case, use `Router.localFragmentBasePath` instead of `Route.fragmentBasePath`)
 
 When hosting your static site you might not be able to have a server respond to any route you want, you might be limited to just one url per html file on viewing a `file:///` URL in the browser without a web server
 
@@ -409,6 +409,18 @@ Then you can use this modifier on any link or other element safely:
 a(navigateTo(libraryPage), "Library") // sets `href` and conditional `onClick`
 button(navigateTo(logoutPage), "Log out") // sets unconditional `onClick` only
 ```
+
+
+### Canonicalizing the URLs
+
+When initializing the router on page load, we parse the initial URL and emit the corresponding Page. Note that unlike `pushState(page)` or `replaceState(page)`, we do not update the URL to the initial page's canonical URL, the original URL stays. This is helpful because the URL might contain query params that you don't want to include in your pages but also don't want to remove.
+
+However, as soon as you navigate to a different page by means of `pushState(page)` or `replaceState(page)`, the URL will be updated to the canonical URL of the next page, with any extraneous query params removed.
+
+If you want the initial URL canonicalized (as was done automatically prior to Waypoint 0.4.0), call `router.replaceState(router.$currentPage.now())` on page load.
+
+If you need to manage large numbers of common query params, consider using [ContextRouteBuilder](#contextroutebuilder)
+
 
 
 

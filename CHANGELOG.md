@@ -6,8 +6,12 @@ _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / 
 
 #### v0.4.0 – May 2021
 
+* **Fix: When initializing the router, do not update the initial URL to the canonical URL of the initial page**
+  * Keep the original URL with whatever extraneous query params it might have, to give any third party tools you might be using a chance to look at them
+* Fix: Respond to `hashChange` events properly
 * New: Base path and fragment matching
   * You can now match routes like `/#/note/123` instead of `/note/123` by providing `basePath = Route.fragmentBasePath` to Route constructors
+  * You can also use hash routing on a `file://` URL now
 * New: Basic route helpers to match URL fragments (text after `#`)
 
 #### v0.3.0 – Feb 2021
