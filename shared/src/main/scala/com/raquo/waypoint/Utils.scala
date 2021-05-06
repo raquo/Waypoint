@@ -11,6 +11,14 @@ object Utils {
     url.startsWith(origin + "/")
   }
 
+  private[waypoint] def makeRelativeUrl(origin: String, absoluteUrl: String): String = {
+    if (absoluteUrlMatchesOrigin(origin, absoluteUrl)) {
+      absoluteUrl.substring(origin.length)
+    } else {
+      throw new Exception(s"Can not make `$absoluteUrl` into relative URL, origin does not match `$origin`.")
+    }
+  }
+
   // #Note This is different from basePath.endsWith("#") in case of multiple `#`
   private[waypoint] def basePathHasEmptyFragment(basePath: String): Boolean = {
     basePath.nonEmpty && {

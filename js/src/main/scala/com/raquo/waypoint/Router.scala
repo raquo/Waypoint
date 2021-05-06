@@ -26,8 +26,8 @@ import scala.util.Try
   *                              history state
   *                              If you throw here, [[deserializeFallback]] will be called instead.
   *
-  * @param routeFallback       - receives initial URL as input and returns a page to render when
-  *                              none of the routes match on initial page load.
+  * @param routeFallback       - receives URL as input (either initialUrl or on hashChange event) and returns a page
+  *                              to render when none of the routes match on initial page load.
   *                              When rendering a fallback page, the URL will stay the same.
   *                              If you want to perform any logic (such as redirects) in case of this fallback,
   *                              put it in the renderer (whatever you have responding to router.\$currentPage).
@@ -41,7 +41,7 @@ import scala.util.Try
   *
   * @param owner               - typically unsafeWindowOwner in Laminar (if the router should never die, i.e. it's a whole app router)
   *
-  * @param origin              - e.g. "http://localhost:8080"
+  * @param origin              - e.g. "http://localhost:8080", without trailing slash
   *
   * @param initialUrl          - e.g. "http://localhost:8080/page"
   *
@@ -52,7 +52,7 @@ class Router[BasePage](
   serializePage: BasePage => String,
   deserializePage: String => BasePage,
   getPageTitle: BasePage => String,
-  routeFallback: String => BasePage = Router.throwOnInvalidInitialUrl,
+  routeFallback: String => BasePage = Router.throwOnUnknownUrl,
   deserializeFallback: Any => BasePage = Router.throwOnInvalidState
 )(
   $popStateEvent: EventStream[dom.PopStateEvent],
@@ -92,7 +92,11 @@ class Router[BasePage](
       val maybeInitialRoutePage = pageForAbsoluteUrl(initialUrl)
 
       maybeInitialRoutePage.foreach { page =>
-        handleRouteEvent(pageToRouteEvent(page, replace = true, fromPopState = false))
+        // #Note
+        //  - `handlePopState` replies on us replacing the URL on page load as this sets a non-null state
+        //  - We deliberately use `forceUrl` to prevent overwriting the URL with the canonical URL for the page
+        //    because the original URL might have query params that the matching page does not track
+        handleRouteEvent(pageToRouteEvent(page, replace = true, fromPopState = false, forceUrl = Utils.makeRelativeUrl(origin, initialUrl)))
       }
 
       // Note: routeFallback can throw
@@ -191,12 +195,17 @@ class Router[BasePage](
 
   // --
 
-  private def pageToRouteEvent(page: BasePage, replace: Boolean, fromPopState: Boolean): RouteEvent[BasePage] = {
+  private def pageToRouteEvent(
+    page: BasePage,
+    replace: Boolean,
+    fromPopState: Boolean,
+    forceUrl: String = ""
+  ): RouteEvent[BasePage] = {
     new RouteEvent(
       page,
       stateData = serializePage(page),
       pageTitle = getPageTitle(page),
-      url = relativeUrlForPage(page),
+      url = if (forceUrl.nonEmpty) forceUrl else relativeUrlForPage(page),
       replace = replace,
       fromPopState = fromPopState
     )
@@ -218,28 +227,54 @@ class Router[BasePage](
   }
 
   /** This method should be added as a listener on window popstate event. Note:
-    * - this event is fired when user navigates with back / forward browser functionality.
+    * - this event is fired when user navigates with back / forward browser functionality
+    * - this event is fired when user changes the fragment / hash of the URL (e.g. by clicking a #link or editing the URL)
     * - this event is not fired for initial page load, or when we call pushState or replaceState
     */
   private def handlePopState(ev: dom.PopStateEvent): Unit = {
-    // Note: deserializeFallback
-    val page = Try((ev.state: Any)).map {
+    val routeEvent = (ev.state: Any) match {
+
       case stateStr: String =>
-        Try(deserializePage(stateStr)).getOrElse(deserializeFallback(ev.state))
+        val page = Try(deserializePage(stateStr)).getOrElse(deserializeFallback(ev.state))
+        pageToRouteEvent(page, replace = false, fromPopState = true)
+
+      case null =>
+        // Respond to hashChange events here.
+        // - hashChange events trigger popState events, like navigation
+        // - Unfortunately we can't easily tell which events are coming from hashChange except that ev.state is null
+        // - However, when navigating back to the original, initialUrl, ev.state would also normally be null,
+        //   but that's not a problem for us because we replaceState on page load, and that replaces the original
+        //   history record with one that does have ev.state
+        // - So end result is that we can tell that this here is a hashChange event just by looking at ev.state == null
+        // https://stackoverflow.com/a/33169145/2601788
+        val absoluteUrl = dom.window.location.href
+        val relativeUrl = Utils.makeRelativeUrl(origin, absoluteUrl)
+        val page = pageForAbsoluteUrl(absoluteUrl).getOrElse(routeFallback(absoluteUrl))
+        pageToRouteEvent(page, replace = false, fromPopState = true, forceUrl = relativeUrl)
+
       case _ =>
-        deserializeFallback(ev.state)
+        val fallbackPage = deserializeFallback(ev.state)
+        pageToRouteEvent(fallbackPage, replace = false, fromPopState = true)
     }
-    routeEventBus.emitTry(page.map { page =>
-      pageToRouteEvent(page, replace = false, fromPopState = true)
-    })
+    routeEventBus.emit(routeEvent)
   }
 
 }
 
 object Router {
 
-  private val throwOnInvalidInitialUrl = (initialUrl: String) => {
-    throw new Exception("Unable to parse initial URL into a Page: " + initialUrl)
+  /** Like Route.fragmentBasePath, but can be used locally with file:// URLs */
+  def localFragmentBasePath: String = {
+    val origin = dom.window.location.origin.get
+    if (origin == "file://") {
+      dom.window.location.pathname + "#"
+    } else {
+      Route.fragmentBasePath
+    }
+  }
+
+  private val throwOnUnknownUrl = (initialUrl: String) => {
+    throw new Exception("Unable to parse URL into a Page: " + initialUrl)
   }
 
   /** History State can be any serializable JS value. Could be a string, a plain object, etc.

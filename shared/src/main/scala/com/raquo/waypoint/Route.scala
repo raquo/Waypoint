@@ -87,7 +87,7 @@ object Route {
   //  All these builders should not have such bespoke implementations.
 
   /** Use this as `basePath` if you want your route to match `/#/foo` instead of `/foo` */
-  def fragmentBasePath: String = "/#"
+  val fragmentBasePath: String = "/#"
 
   /** Create a route with path segments only */
   def apply[Page: ClassTag, Args](
