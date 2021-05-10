@@ -22,7 +22,7 @@ lazy val waypointJVM = waypoint.jvm // #Note the JVM project exists to provide `
 lazy val commonSettings = releaseSettings ++ Seq(
   libraryDependencies ++= Seq(
     "be.doeraene" %%% "url-dsl" % Versions.UrlDsl,
-    "com.lihaoyi" %%% "upickle" % Versions.Upickle % Test,
+    "com.lihaoyi" %%% "upickle" % (if (scalaVersion.value == Versions.Scala_3_RC2) "1.3.11" else "1.3.12") % Test,
     "org.scalatest" %%% "scalatest" % (if (scalaVersion.value == Versions.Scala_3_RC2) "3.2.7" else "3.2.8") % Test,
   ),
   scalacOptions ++= Seq(
@@ -67,7 +67,7 @@ lazy val releaseSettings = Seq(
   normalizedName := "waypoint",
   organization := "com.raquo",
   scalaVersion := Versions.Scala_2_13,
-  crossScalaVersions := Seq(/*Versions.Scala_3_RC3,*/ Versions.Scala_3_RC2, Versions.Scala_2_13, Versions.Scala_2_12),
+  crossScalaVersions := Seq(Versions.Scala_3_RC3, Versions.Scala_3_RC2, Versions.Scala_2_13, Versions.Scala_2_12),
   homepage := Some(url("https://github.com/raquo/waypoint")),
   licenses += ("MIT", url("https://github.com/raquo/waypoint/blob/master/LICENSE.md")),
   scmInfo := Some(

@@ -16,7 +16,7 @@ object Versions {
 
   val Laminar = "0.13.0"
 
-  val Upickle = "1.3.11"
+  val Upickle = "1.3.12"
 
   val ScalaTest = "3.2.8"
 }

@@ -354,7 +354,7 @@ Lastly, normally you fire `router.pushState` to update the current page. But in 
 
 #### Configuring your web server
 
-Unless you're using `Route.fragmentBasePath` (see above) to make put all your routes in the fragment of the URL, like `/#/foo/bar`, you need to ensure that your web server responds to all your Waypoint routes with the HTML file that will load your Scala.js bundle and thus the Waypoint application. Basically, if your frontend thinks that it's responsible for handling the route `example.com/foo/bar`, you better make sure that your backend will load that frontend if the user enters `example.com/foo/bar` in the address bar.
+Unless you're using `Route.fragmentBasePath` (see above) to put all your routes in the fragment of the URL, like `/#/foo/bar`, you need to ensure that your web server responds to all your Waypoint routes with the HTML file that will load your Scala.js bundle and thus the Waypoint application. Basically, if your frontend thinks that it's responsible for handling the route `example.com/foo/bar`, you better make sure that your backend will load that frontend if the user enters `example.com/foo/bar` in the address bar.
 
 The easiest way to accomplish this is to put all or most of your Waypoint routes behind a prefix like `/app`. You can use `basePath` for this, or just start all your routes at `val appRoot = root / "app"`. Then on the backend you will tell the server to match anything under `/app` to your frontend.
 
