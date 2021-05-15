@@ -1,19 +1,16 @@
 logLevel := Level.Warn
 
-// @TODO remove when scalajs-dom is published for Scala 3.0.0-RC2
-addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.5.3")
-
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.0")
 
 addSbtPlugin("ch.epfl.scala" % "sbt-scalajs-bundler" % "0.20.0")
 
 addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.0.0")
 
-addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.1")
+addSbtPlugin("com.github.sbt" % "sbt-pgp" % "2.1.2")
 
 addSbtPlugin("com.github.sbt" % "sbt-release" % "1.0.15")
 
-addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.5")
+addSbtPlugin("org.xerial.sbt" % "sbt-sonatype" % "3.9.7")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
