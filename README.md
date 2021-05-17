@@ -285,7 +285,7 @@ See example usage in tests, specifically ContextRouteBuilderSpec.
 
 ### Base Path and Fragment Routes
 
-If you want your single page application navigation to work on fragments, i.e. use URLs like `example.com/#/foo/bar` instead of `example.com/#/foo/bar`, you can do this by providing `basePath = Route.fragmentBasePath` to your Route constructor.
+If you want your single page application navigation to work on fragments, i.e. use URLs like `example.com/#/foo/bar` instead of `example.com/foo/bar`, you can do this by providing `basePath = Route.fragmentBasePath` to your Route constructor.
 
 Typically you will want to do this for every one of your Routes, but the Waypoint API is flexible to allow only a subset of Routes to be fragment routes.
 
