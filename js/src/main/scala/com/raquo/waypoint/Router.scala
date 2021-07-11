@@ -57,7 +57,7 @@ class Router[BasePage](
 )(
   $popStateEvent: EventStream[dom.PopStateEvent],
   owner: Owner,
-  val origin: String = dom.window.location.origin.get,
+  val origin: String = Router.canonicalDocumentOrigin,
   initialUrl: String = dom.window.location.href
 ) {
 
@@ -85,8 +85,8 @@ class Router[BasePage](
     }
 
     lazy val initialPage = {
-      if (!initialUrl.startsWith(origin + "/")) {
-        throw new Exception(s"Initial URL does not belong to origin: $initialUrl vs $origin/ - Use the full absolute URL for initialUrl, and that don't include the trailing slash in origin")
+      if (!Utils.absoluteUrlMatchesOrigin(origin, url = initialUrl)) {
+        throw new Exception(s"Initial URL does not belong to origin: $initialUrl vs $origin/ - Use the full absolute URL for initialUrl, and don't include the trailing slash in origin")
       }
 
       val maybeInitialRoutePage = pageForAbsoluteUrl(initialUrl)
@@ -119,7 +119,7 @@ class Router[BasePage](
 
   /** @throws Exception when url is malformed */
   def pageForAbsoluteUrl(url: String): Option[BasePage] = {
-    if (Utils.absoluteUrlMatchesOrigin(origin, url)) {
+    if (Utils.absoluteUrlMatchesOrigin(origin, url = url)) {
       val relativeUrl = url.substring(origin.length)
       pageForRelativeUrl(relativeUrl)
     } else if (url == origin) {
@@ -265,8 +265,7 @@ object Router {
 
   /** Like Route.fragmentBasePath, but can be used locally with file:// URLs */
   def localFragmentBasePath: String = {
-    val origin = dom.window.location.origin.get
-    if (origin == "file://") {
+    if (canonicalDocumentOrigin == "file://") {
       dom.window.location.pathname + "#"
     } else {
       Route.fragmentBasePath
@@ -283,5 +282,12 @@ object Router {
   private val throwOnInvalidState = (state: Any) => {
     // @TODO `null` is needed to work around https://github.com/lampepfl/dotty/issues/11943, drop it later
     throw new Exception("Unable to deserialize history state: " + JSON.stringify(state.asInstanceOf[js.Any], null))
+  }
+
+  /** In Firefox, `file://` URLs have "null" (a string) as location.origin instead of "file://" like in Chrome or Safari.
+    * This helper fixes this discrepancy.
+    */
+  private val canonicalDocumentOrigin: String = {
+    if (dom.document.location.protocol == "file:") "file://" else dom.document.location.origin.get
   }
 }

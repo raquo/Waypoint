@@ -7,7 +7,7 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
-    "com.raquo" %%% "waypoint" % "0.4.0"   // Requires Airstream 0.13.0 & URL DSL 0.4.0
+    "com.raquo" %%% "waypoint" % "0.4.1"   // Requires Airstream 0.13.0 & URL DSL 0.4.0
 
 
 
@@ -291,11 +291,11 @@ Typically you will want to do this for every one of your Routes, but the Waypoin
 
 Why would you want this? Using path segments like `/foo/bar` without fragment routes requires the cooperation of the web server. Not needing that is useful when:
 
+* Developing locally without a web server, by looking at a `file://` URL (in this case, use **`Router.localFragmentBasePath`** instead of `Route.fragmentBasePath`)
 * Using a simple static site host like Github pages that doesn't provide a catch-all feature
 * Embedding live examples of router applications with [mdoc](https://github.com/scalameta/mdoc)
-* Developing locally without a web server, by looking at a `file:///` URL (in this case, use `Router.localFragmentBasePath` instead of `Route.fragmentBasePath`)
 
-When hosting your static site you might not be able to have a server respond to any route you want, you might be limited to just one url per html file on viewing a `file:///` URL in the browser without a web server
+When hosting your static site you might not be able to have a server respond to any route you want, you might be limited to just one url per html file on viewing a `file://` URL in the browser without a web server
 
 As the name implies, aside from fragments, a Route's `basePath` can contain any path. It could be `/foo/bar/index.html#` or even just `/foo/bar`. If set, it must have a leading slash.
 
@@ -409,6 +409,23 @@ Then you can use this modifier on any link or other element safely:
 a(navigateTo(libraryPage), "Library") // sets `href` and conditional `onClick`
 button(navigateTo(logoutPage), "Log out") // sets unconditional `onClick` only
 ```
+
+
+#### Firefox and file:// URLs
+
+Chrome and Safari return `"file://"` as the `location.origin` of `file://` URLs, which is what Waypoint expects, whereas Firefox returns `"null"` (as a string).
+
+If a Waypoint error message pointed you to this section of the docs, that means you're giving Waypoint a `"null"` origin where a `protocol://` origin is expected, most likely because you're using Firefox with `file://` URLs (if you ever see this error message for any other reason, please let me know).
+
+To work around this, you should use something like this:
+
+```scala
+def canonicalOrigin = if (dom.document.location.protocol == "file:") "file://" else dom.document.location.origin.get
+```
+
+or just use `router.origin` which is derived from `dom.document.location` in the same manner (unless you overrode the Router's `origin` constructor param).
+
+Unfortunately I don't think I can fix this in Waypoint in a safe way (messing with URLs can be risky), but I also don't expect this to be a significant problem given the very limited scope of the problem (just the two public methods – `pageForAbsoluteUrl` and `pageForRelativeUrl`) and the easy workaround.
 
 
 ### Canonicalizing the URLs

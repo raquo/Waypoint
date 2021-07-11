@@ -4,6 +4,10 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v0.4.1 – July 2021
+
+* Fix: Work around `location.origin` being `"null"` for `file://` URLs in Firefox.
+
 #### v0.4.0 – May 2021
 
 * **Fix: When initializing the router, do not update the initial URL to the canonical URL of the initial page**
