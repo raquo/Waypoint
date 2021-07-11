@@ -36,11 +36,11 @@ class Route[Page, Args] private(
 
   /** @param origin - typically dom.window.location.origin.get e.g. "http://localhost:8080"
     *
-    * @throws Exception when url is not absolute or is malformed, or in case of https://github.com/raquo/Airstream#firefox-and-file-urls
+    * @throws Exception when url is not absolute or is malformed, or in case of https://github.com/raquo/Waypoint#firefox-and-file-urls
     */
   def pageForAbsoluteUrl(origin: String, url: String): Option[Page] = {
     if (origin == "null") {
-      throw new Exception("pageForAbsoluteUrl was provided with a \"null\" origin. See https://github.com/raquo/Airstream#firefox-and-file-urls")
+      throw new Exception("pageForAbsoluteUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
     }
     val originMatches = Utils.absoluteUrlMatchesOrigin(origin, url)
     val urlToMatch = if (originMatches) url.substring(origin.length) else url
@@ -55,11 +55,11 @@ class Route[Page, Args] private(
 
   /** @param origin - typically dom.window.location.origin.get e.g. "http://localhost:8080"
     *
-    * @throws Exception when url is not relative, or in case of https://github.com/raquo/Airstream#firefox-and-file-urls
+    * @throws Exception when url is not relative, or in case of https://github.com/raquo/Waypoint#firefox-and-file-urls
     */
   def pageForRelativeUrl(origin: String, url: String): Option[Page] = {
     if (origin == "null") {
-      throw new Exception("pageForRelativeUrl was provided with a \"null\" origin. See https://github.com/raquo/Airstream#firefox-and-file-urls")
+      throw new Exception("pageForRelativeUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
     }
     if (!Utils.isRelative(url)) {
       throw new Exception(s"Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")

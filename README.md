@@ -7,7 +7,7 @@ Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) 
 
 This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
 
-    "com.raquo" %%% "waypoint" % "0.4.1"   // Requires Airstream 0.13.0 & URL DSL 0.4.0
+    "com.raquo" %%% "waypoint" % "0.4.2"   // Requires Airstream 0.13.0 & URL DSL 0.4.0
 
 
 
