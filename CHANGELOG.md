@@ -4,6 +4,10 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v0.5.0 – Nov 2021
+
+* **Build: Update Airstream to 0.14.0, bump Scala to 2.13.6 and 3.0.2, Scala.js to 1.7.1, uPickle to 1.4.2**
+
 #### v0.4.2 – July 2021
 
 * Fix: Work around `location.origin` being `"null"` for `file://` URLs in Firefox.

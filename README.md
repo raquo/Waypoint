@@ -5,9 +5,11 @@
 
 Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) using [@sherpal](https://github.com/sherpal)'s [URL DSL](https://github.com/sherpal/url-dsl) library for URL matching and the browser's [History API](https://developer.mozilla.org/en-US/docs/Web/API/History) for managing URL transitions.
 
-This is an early but functional version. While Laminar itself is quite polished, Waypoint might be a bit rough around the edges including the docs.
+Unlike Laminar itself, Waypoint is quite opinionated, focusing on a specific approach to representing routes that I think works great. [Frontroute](https://github.com/tulz-app/frontroute) is another routing alternative.
 
-    "com.raquo" %%% "waypoint" % "0.4.2"   // Requires Airstream 0.13.0 & URL DSL 0.4.0
+Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
+
+    "com.raquo" %%% "waypoint" % "0.5.0"   // Requires Airstream 0.14.0 & URL DSL 0.4.0
 
 
 

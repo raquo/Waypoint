@@ -43,7 +43,7 @@ lazy val commonSettings = releaseSettings ++ Seq(
 
 lazy val jsSettings = Seq(
   libraryDependencies ++= Seq(
-    ("org.scala-js" %%% "scalajs-dom" % Versions.ScalaJsDom).cross(CrossVersion.for3Use2_13),
+    "org.scala-js" %%% "scalajs-dom" % Versions.ScalaJsDom,
     "com.raquo" %%% "airstream" % Versions.Airstream,
     "com.raquo" %%% "laminar" % Versions.Laminar % Test,
   ),
