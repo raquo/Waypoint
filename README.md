@@ -243,7 +243,7 @@ Route.onlyQuery[SearchPage, String](
   pattern = (root / "search" / endOfSegments) ? (param[String]("query"))
 )
 
-Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
+Route.withFragment[BigLegalPage, String, String](
   encode = page => FragmentPatternArgs(path = page.page, query = (), fragment = page.section),
   decode = args => BigLegalPage(page = args.path, section = args.fragment),
   pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String]
