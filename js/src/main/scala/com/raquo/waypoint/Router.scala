@@ -272,8 +272,8 @@ object Router {
     }
   }
 
-  private val throwOnUnknownUrl = (initialUrl: String) => {
-    throw new Exception("Unable to parse URL into a Page: " + initialUrl)
+  private val throwOnUnknownUrl = (url: String) => {
+    throw new Exception("Unable to parse URL into a Page, it does not match any routes: " + url)
   }
 
   /** History State can be any serializable JS value. Could be a string, a plain object, etc.
