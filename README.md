@@ -2,7 +2,7 @@
 
 [![Build status](https://github.com/raquo/Waypoint/actions/workflows/test.yml/badge.svg)](https://github.com/raquo/Waypoint/actions/workflows/test.yml)
 [![Chat on https://discord.gg/JTrUxhq7sj](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/JTrUxhq7sj)
-[![Maven Central](https://img.shields.io/maven-central/v/com.raquo/airstream_sjs1_3.svg)](https://search.maven.org/artifact/com.raquo/airstream_sjs1_3)
+[![Maven Central](https://img.shields.io/maven-central/v/com.raquo/waypoint_sjs1_3.svg)](https://search.maven.org/artifact/com.raquo/waypoint_sjs1_3)
 
 Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) using [@sherpal](https://github.com/sherpal)'s [URL DSL](https://github.com/sherpal/url-dsl) library for URL matching and the browser's [History API](https://developer.mozilla.org/en-US/docs/Web/API/History) for managing URL transitions.
 
@@ -12,7 +12,7 @@ Waypoint can be used with other Scala.js libraries too, not just Laminar. More o
 
 Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
 
-    "com.raquo" %%% "waypoint" % "0.5.0"   // Requires Airstream 0.14.0 & URL DSL 0.4.0
+    "com.raquo" %%% "waypoint" % "6.0.0-M1"   // Requires Airstream 15.0.0-M1 & URL DSL 0.5.0
 
 
 
