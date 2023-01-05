@@ -55,7 +55,7 @@ class Router[BasePage](
   routeFallback: String => BasePage = Router.throwOnUnknownUrl,
   deserializeFallback: Any => BasePage = Router.throwOnInvalidState
 )(
-  $popStateEvent: EventStream[dom.PopStateEvent],
+  popStateEvents: EventStream[dom.PopStateEvent],
   owner: Owner,
   val origin: String = Router.canonicalDocumentOrigin,
   initialUrl: String = dom.window.location.href
@@ -74,9 +74,9 @@ class Router[BasePage](
     *  - [[routeFallback]] was invoked and threw an Exception
     *  - [[deserializeFallback]] was invoked and threw an Exception
     */
-  val $currentPage: StrictSignal[BasePage] = {
-    val $pageFromRoute = routeEventBus.events.map(_.page)
-    val $forcedPage = forcePageBus.events.map { page =>
+  val currentPageSignal: StrictSignal[BasePage] = {
+    val pageFromRoute = routeEventBus.events.map(_.page)
+    val forcedPage = forcePageBus.events.map { page =>
       val pageTitle = getPageTitle(page)
       if (pageTitle.nonEmpty) {
         dom.document.title = pageTitle
@@ -104,7 +104,7 @@ class Router[BasePage](
     }
 
     EventStream
-      .merge($pageFromRoute, $forcedPage)
+      .merge(pageFromRoute, forcedPage)
       .startWithTry(initialPage)
       .observe(owner)
   }
@@ -113,7 +113,7 @@ class Router[BasePage](
 
   routeEventBus.events.foreach(handleRouteEvent)(owner)
 
-  $popStateEvent.foreach(handlePopState)(owner)
+  popStateEvents.foreach(handlePopState)(owner)
 
   // --
 

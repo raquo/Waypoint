@@ -1,7 +1,7 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api.L
+import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import org.scalajs.dom
@@ -45,7 +45,7 @@ class RouterSpec extends UnitSpec {
     serializePage = page => write(page)(AppPage.rw),
     deserializePage = pageStr => read(pageStr)(AppPage.rw)
   )(
-    $popStateEvent = L.windowEvents.onPopState,
+    popStateEvents = L.windowEvents(_.onPopState),
     owner = testOwner,
     initialUrl = "http://localhost/app/library/700",
     origin = "http://localhost"
@@ -57,21 +57,21 @@ class RouterSpec extends UnitSpec {
 
     val router = makeRouter
 
-    router.$currentPage.now() shouldBe LibraryPage(700)
+    router.currentPageSignal.now() shouldBe LibraryPage(700)
 
     // --
 
     router.pushState(LoginPage)
 
     dom.document.location.href shouldBe "http://localhost/hello/login"
-    router.$currentPage.now() shouldBe LoginPage
+    router.currentPageSignal.now() shouldBe LoginPage
 
     // --
 
     router.replaceState(LibraryPage(100))
 
     dom.document.location.href shouldBe "http://localhost/app/library/100"
-    router.$currentPage.now() shouldBe LibraryPage(100)
+    router.currentPageSignal.now() shouldBe LibraryPage(100)
   }
 
   // @TODO[Test]

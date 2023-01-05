@@ -2,7 +2,7 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.core.Observer
 import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api.L
+import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.context.{PageBundle, SharedParams}
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
@@ -55,7 +55,7 @@ class ContextRouteBuilderSpec extends UnitSpec {
     serializePage = page => write(page)(PageBundle.rw),
     deserializePage = pageStr => read(pageStr)(PageBundle.rw)
   )(
-    $popStateEvent = L.windowEvents.onPopState,
+    popStateEvents = L.windowEvents(_.onPopState),
     owner = testOwner,
     origin = "http://localhost", // dom.window.location.origin.get
     initialUrl = "http://localhost/app/library/700"
@@ -66,7 +66,7 @@ class ContextRouteBuilderSpec extends UnitSpec {
     mod: (PageBundle, A) => PageBundle
   ): Observer[A] = {
     Observer { v =>
-      val currPage = router.$currentPage.now()
+      val currPage = router.currentPageSignal.now()
       router.pushState(mod(currPage, v))
     }
   }
@@ -101,42 +101,42 @@ class ContextRouteBuilderSpec extends UnitSpec {
 
     val changeVersion = makeChangeVersion(router)
 
-    router.$currentPage.now() shouldBe PageBundle(LibraryPage(700), SharedParams())
+    router.currentPageSignal.now() shouldBe PageBundle(LibraryPage(700), SharedParams())
 
     // @TODO[API] What should we do about trailing question marks when the query is empty? Probably a URL-DSL question.
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/app/library/700?"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/app/library/700?"
 
     // --
 
     changeVersion.onNext(Some("v1"))
 
-    router.$currentPage.now() shouldBe PageBundle(LibraryPage(700), SharedParams(version = Some("v1")))
+    router.currentPageSignal.now() shouldBe PageBundle(LibraryPage(700), SharedParams(version = Some("v1")))
 
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/app/library/700?version=v1"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/app/library/700?version=v1"
 
     // --
 
     pushPage.onNext(LoginPage)
 
-    router.$currentPage.now() shouldBe PageBundle(LoginPage, SharedParams(version = Some("v1")))
+    router.currentPageSignal.now() shouldBe PageBundle(LoginPage, SharedParams(version = Some("v1")))
 
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/hello/login?version=v1"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/hello/login?version=v1"
 
     // --
 
     changeLang.onNext(Some("ru"))
 
-    router.$currentPage.now() shouldBe PageBundle(LoginPage, SharedParams(version = Some("v1"), lang = Some("ru")))
+    router.currentPageSignal.now() shouldBe PageBundle(LoginPage, SharedParams(version = Some("v1"), lang = Some("ru")))
 
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/hello/login?version=v1&lang=ru"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/hello/login?version=v1&lang=ru"
 
     // --
 
     pushPage.onNext(LibraryPage(200))
 
-    router.$currentPage.now() shouldBe PageBundle(LibraryPage(200), SharedParams(version = Some("v1"), lang = Some("ru")))
+    router.currentPageSignal.now() shouldBe PageBundle(LibraryPage(200), SharedParams(version = Some("v1"), lang = Some("ru")))
 
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/app/library/200?version=v1&lang=ru"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/app/library/200?version=v1&lang=ru"
 
     // --
 
@@ -144,17 +144,17 @@ class ContextRouteBuilderSpec extends UnitSpec {
 
     changeLang.onNext(None)
 
-    router.$currentPage.now() shouldBe PageBundle(SearchPage("is there anybody out there ?"), SharedParams(version = Some("v1"), lang = None))
+    router.currentPageSignal.now() shouldBe PageBundle(SearchPage("is there anybody out there ?"), SharedParams(version = Some("v1"), lang = None))
 
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/search?query=is%20there%20anybody%20out%20there%20%3F&version=v1"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/search?query=is%20there%20anybody%20out%20there%20%3F&version=v1"
 
     // --
 
     pushPage.onNext(LibraryPage(300))
 
-    router.$currentPage.now() shouldBe PageBundle(LibraryPage(300), SharedParams(version = Some("v1"), lang = None))
+    router.currentPageSignal.now() shouldBe PageBundle(LibraryPage(300), SharedParams(version = Some("v1"), lang = None))
 
-    router.relativeUrlForPage(router.$currentPage.now()) shouldBe "/app/library/300?version=v1"
+    router.relativeUrlForPage(router.currentPageSignal.now()) shouldBe "/app/library/300?version=v1"
 
   }
 

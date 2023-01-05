@@ -20,6 +20,11 @@ case class SplitRender[Page, View](
     collect[P](_ => view)
   }
 
+  /** Similar to `collectStatic`, but evaluates `view` only once, when this method is called. */
+  def collectStaticStrict[P <: Page : ClassTag](@unused page: P)(view: View): SplitRender[Page, View] = {
+    collect[P](_ => view)
+  }
+
   // @TODO[Naming] This is really the PF equivalent of collectStatic, right...?
   def collectStaticPF(render: PartialFunction[Page, View]): SplitRender[Page, View] = {
     val renderer = new CollectPageRenderer[Page, View](render)
@@ -39,9 +44,9 @@ case class SplitRender[Page, View](
   }
 
   /** Signal of output elements. Put this in your DOM with:
-    * `child <-- SplitRender(\$page).collect(...).collectSignal(...).$view`
+    * `child <-- SplitRender(page).collect(...).collectSignal(...).signal`
     */
-  def $view: Signal[View] = {
+  def signal: Signal[View] = {
     var maybeCurrentRenderer: Option[Renderer[Page, View]] = None
 
     pageSignal.map { nextPage =>

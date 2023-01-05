@@ -1,15 +1,13 @@
 package com.raquo.waypoint
 
-import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
-import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api.L
+import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
-import com.raquo.waypoint.fixtures.AppPage.LibraryPage
-import org.scalatest.Assertion
+import com.raquo.waypoint.fixtures.AppPage.{LibraryPage, _}
+import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import upickle.default._
 
-import scala.util.{Success, Try}
+import scala.util.Try
 
 class BasePathSpec extends UnitSpec {
 
@@ -151,7 +149,7 @@ class BasePathSpec extends UnitSpec {
           serializePage = page => write(page)(AppPage.rw),
           deserializePage = pageStr => read(pageStr)(AppPage.rw)
         )(
-          $popStateEvent = L.windowEvents.onPopState,
+          popStateEvents = L.windowEvents(_.onPopState),
           owner = testOwner,
           origin = origin,
           initialUrl = origin + s"${basePath}/app/library/700"
@@ -218,6 +216,7 @@ class BasePathSpec extends UnitSpec {
 
         it("query routes - parse urls") {
           expectPageRelative(searchRoute, origin, s"$basePath/search?query=hello", Some(SearchPage("hello")))
+          expectPageRelative(searchRoute, origin, s"$basePath/search?query=", Some(SearchPage("")))
           expectPageRelative(searchRoute, origin, s"$basePath/othersearch?query=sugar", None)
         }
 
@@ -262,30 +261,6 @@ class BasePathSpec extends UnitSpec {
           urlForPage(DocsPage(NumPage(50))) shouldBe None
         }
       }
-    }
-  }
-
-  def expectPageAbsolute(route: Route[_, _], origin: String, url: String, expectedPage: Option[AppPage]): Assertion = {
-    withClue("expectPageAbsolute: " + url + " ? " + expectedPage.toString + "\n") {
-      Try(route.pageForAbsoluteUrl(origin, url)) shouldBe Success(expectedPage)
-    }
-  }
-
-  def expectPageRelative(route: Route[_, _], origin: String, url: String, expectedPage: Option[AppPage]): Assertion = {
-    withClue("expectPageRelative: " + url + " ? " + expectedPage.toString + "\n") {
-      Try(route.pageForRelativeUrl(origin, url)) shouldBe Success(expectedPage)
-    }
-  }
-
-  def expectPageAbsoluteFailure(route: Route[_, _], origin: String, url: String): Assertion = {
-    withClue("expectPageAbsoluteFailure: " + url + " ? failure\n") {
-      Try(route.pageForAbsoluteUrl(origin, url)).toOption shouldBe None
-    }
-  }
-
-  def expectPageRelativeFailure(route: Route[_, _], origin: String, url: String): Assertion = {
-    withClue("expectPageRelativeFailure: " + url + " ? failure\n") {
-      Try(route.pageForRelativeUrl(origin, url)).toOption shouldBe None
     }
   }
 }

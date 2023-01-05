@@ -4,6 +4,16 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v0.6.0 – Jan 2023
+
+* **Build: Update Airstream to 15.0.0, URL-DSL to 0.5.0, etc.**
+* **Naming: `$popStateEvent` -> `popStateEvents`**
+* **Naming: `$currentPage` -> `currentPageSignal`**
+* **Naming: `$view` -> `signal`**
+* **API: Use `Tuplez.unapply`. Fixes [this issue](https://github.com/sherpal/url-dsl/issues/12).** Thanks, [@yurique](https://github.com/yurique)! 
+* **API: Non-optional query params now match empty strings, e.g. `url?param=` and even `url?param`. See [this issue](https://github.com/raquo/url-dsl/pull/1). Thanks, [@i10416](https://github.com/i10416)**
+* New: `collectStaticStrict` for when you want to cache the element.
+
 #### v0.5.0 – Nov 2021
 
 * **Build: Update Airstream to 0.14.0, bump Scala to 2.13.6 and 3.0.2, Scala.js to 1.7.1, uPickle to 1.4.2**

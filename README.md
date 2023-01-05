@@ -1,11 +1,14 @@
 # Waypoint
 
-[![Join the chat at https://gitter.im/Laminar_/Lobby](https://badges.gitter.im/Laminar_/Lobby.svg)](https://gitter.im/Laminar_/Lobby)
-![Maven Central](https://img.shields.io/maven-central/v/com.raquo/waypoint_sjs1_2.13.svg)
+[![Build status](https://github.com/raquo/Waypoint/actions/workflows/test.yml/badge.svg)](https://github.com/raquo/Waypoint/actions/workflows/test.yml)
+[![Chat on https://discord.gg/JTrUxhq7sj](https://img.shields.io/badge/chat-on%20discord-7289da.svg)](https://discord.gg/JTrUxhq7sj)
+[![Maven Central](https://img.shields.io/maven-central/v/com.raquo/airstream_sjs1_3.svg)](https://search.maven.org/artifact/com.raquo/airstream_sjs1_3)
 
 Waypoint is an efficient Router for [Laminar](https://github.com/raquo/Laminar) using [@sherpal](https://github.com/sherpal)'s [URL DSL](https://github.com/sherpal/url-dsl) library for URL matching and the browser's [History API](https://developer.mozilla.org/en-US/docs/Web/API/History) for managing URL transitions.
 
 Unlike Laminar itself, Waypoint is quite opinionated, focusing on a specific approach to representing routes that I think works great. [Frontroute](https://github.com/tulz-app/frontroute) is another routing alternative.
+
+Waypoint can be used with other Scala.js libraries too, not just Laminar. More on that at the bottom of this document.
 
 Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
 
@@ -36,7 +39,7 @@ A **Router** is a class that provides methods to a) set the current **Page** and
 So how do **Views** fit into all of the above? We need to render certain views based on the current page reported by the router. Here's our setup:
 
 ```scala
-import com.raquo.laminar.api.L
+import com.raquo.laminar.api._
 import com.raquo.waypoint._
 import upickle.default._
 import org.scalajs.dom
@@ -62,7 +65,7 @@ val router = new Router[Page](
   serializePage = page => write(page)(rw), // serialize page data for storage in History API log
   deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
 )(
-  $popStateEvent = L.windowEvents.onPopState, // this is how Waypoint avoids an explicit dependency on Laminar
+  popStateEvents = L.windowEvents(_.onPopState), // this is how Waypoint avoids an explicit dependency on Laminar
   owner = L.unsafeWindowOwner // this router will live as long as the window
 )
 ```
@@ -79,7 +82,7 @@ def renderPage(page: Page): Div = {
 
 val app: Div = div(
   h1("Routing App"),
-  child <-- router.$currentPage.map(renderPage)
+  child <-- router.currentPageSignal.map(renderPage)
 )
 
 render(
@@ -90,35 +93,35 @@ render(
 
 This works, you just need to call `router.pushState(page)` or `router.replaceState(page)` somewhere to trigger the URL changes, and the view will update to show which page was selected.
 
-However, as you know, this rendering is not efficient in Laminar by design. Every time `router.$currentPage` is updated, renderPage is called, creating a whole new element. Not a big deal at all in this toy example, but in the real world it would be re-creating your whole app's DOM tree on every URL change. That is simply unacceptable.
+However, as you know, this rendering is not efficient in Laminar by design. Every time `router.currentPageSignal` is updated, renderPage is called, creating a whole new element. Not a big deal at all in this toy example, but in the real world it would be re-creating your whole app's DOM tree on every URL change. That is simply unacceptable.
 
 You can improve the efficiency of this using Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/docs/Documentation.md#performant-children-rendering--split) operator, but this will prove cumbersome if your app has many different Page types. Waypoint provides a convenient but somewhat opinionated helper to solve this problem:
 
 ```scala
-val splitter = SplitRender[Page, HtmlElement](router.$currentPage)
-  .collectSignal[UserPage] { $userPage => renderUserPage($userPage) }
+val splitter = SplitRender[Page, HtmlElement](router.currentPageSignal)
+  .collectSignal[UserPage] { userPageSignal => renderUserPage(userPageSignal) }
   .collectStatic(LoginPage) { div("Login page") }
  
-def renderUserPage($userPage: Signal[UserPage]): Div = {
+def renderUserPage(userPageSignal: Signal[UserPage]): Div = {
   div(
     "User page ",
-    child.text <-- $userPage.map(user => user.userId)
+    child.text <-- userPageSignal.map(user => user.userId)
   )
 }
  
 val app: Div = div(
   h1("Routing App"),
-  child <-- splitter.$view
+  child <-- splitter.signal
 )
 ``` 
 
-This is essentially a specialized version of the Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/docs/Documentation.md#performant-children-rendering--split). The big idea is the same: provide a helper that lets you provide an efficient `Signal[A] => HtmlElement` instead of the inefficient `Signal[A] => Signal[HtmlElement]`. The difference is that the split operator groups together models by key, **which is a value**, whereas SplitRender groups together models by **subtype** and refines them to a subtype much like a `$currentPage.collect { case p: UserPage => p }` would if `collect` method existed on Signals.
+This is essentially a specialized version of the Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/docs/Documentation.md#performant-children-rendering--split). The big idea is the same: provide a helper that lets you provide an efficient `Signal[A] => HtmlElement` instead of the inefficient `Signal[A] => Signal[HtmlElement]`. The difference is that the split operator groups together models by key, **which is a value**, whereas SplitRender groups together models by **subtype** and refines them to a subtype much like a `currentPageSignal.collect { case p: UserPage => p }` would if `collect` method existed on Signals.
 
 You should read the linked `split` docs to understand the general splitting pattern, as I will only cover this specialized case very lightly.
 
 In the previous, "naive" example, we were creating a new div element every time we navigated to a new user page, even if we're switching from one user page to a different user's page. But in that latter case, the DOM structure is already there, it would be much more efficient to just update the data in the DOM to a different user's values.
 
-And this is exactly what `SplitRender.collectSignal` lets you do: it provides you a refined `Signal[UserPage]` instead of `Signal[Page]`, and it's trivial to build a single div that uses that `$userPage` signal like we do.
+And this is exactly what `SplitRender.collectSignal` lets you do: it provides you a refined `Signal[UserPage]` instead of `Signal[Page]`, and it's trivial to build a single div that uses that `userPageSignal` like we do.
 
 
 
@@ -141,39 +144,39 @@ case object LoginPage extends Page
 
 // ... route and router definitions omitted for brevity ...
 
-val pageSplitter = SplitRender[Page, HtmlElement](router.$currentPage)
-  .collectSignal[AppPage] { $appPage => renderAppPage($appPage) }
+val pageSplitter = SplitRender[Page, HtmlElement](router.currentPageSignal)
+  .collectSignal[AppPage] { appPageSignal => renderAppPage(appPageSignal) }
   .collectStatic(LoginPage) { div("Login page") }
  
-def renderAppPage($appPage: Signal[AppPage]): Div = {
-  val appPageSplitter = SplitRender[AppPage, HtmlElement]($appPage)
-    .collectSignal[UserPage] { $userPage => renderUserPage($userPage) }
-    .collectSignal[NotePage] { $notePage => renderNotePage($notePage) }
+def renderAppPage(appPageSignal: Signal[AppPage]): Div = {
+  val appPageSplitter = SplitRender[AppPage, HtmlElement](appPageSignal)
+    .collectSignal[UserPage] { userPageSignal => renderUserPage(userPageSignal) }
+    .collectSignal[NotePage] { notePageSignal => renderNotePage(notePageSignal) }
   div(
     h2("App header"),
-    child <-- appPageSplitter.$view
+    child <-- appPageSplitter.signal
   )
 }
  
-def renderUserPage($userPage: Signal[UserPage]): Div = {
+def renderUserPage(userPageSignal: Signal[UserPage]): Div = {
   div(
     "User page ",
-    child.text <-- $userPage.map(user => user.userId)
+    child.text <-- userPageSignal.map(user => user.userId)
   )
 }
  
-def renderNotePage($notePage: Signal[NotePage]): Div = {
+def renderNotePage(notePageSignal: Signal[NotePage]): Div = {
   div(
     "Note page. workspaceid: ",
-    child.text <-- $notePage.map(note => note.workspaceId),
+    child.text <-- notePageSignal.map(note => note.workspaceId),
     ", noteid: ",
-    child.text <-- $notePage.map(note => note.noteId)
+    child.text <-- notePageSignal.map(note => note.noteId)
   )
 }
  
 val app: Div = div(
   h1("Routing App"),
-  child <-- splitter.$view
+  child <-- splitter.signal
 )
 ```
 
@@ -181,7 +184,7 @@ One reason for nesting splitters like this could be to avoid re-rendering a comm
 
 SplitRender offers several methods: `collect`, `collectSignal` and `collectStatic`, use the ones that make more sense for your pages. Mixing them is fine of course.
 
-Note: SplitRender is a construct made only of reactive variables. It does not know anything about routing, what the current URL is, etc. You give it a signal of `A` and a way to refine that into `B`, and you get a signal of `B` with `$view`.
+Note: SplitRender is a construct made only of reactive variables. It does not know anything about routing, what the current URL is, etc. You give it a signal of `A` and a way to refine that into `B`, and you get a signal of `B` with `signal`.
 
 
 
@@ -252,7 +255,7 @@ Route.withFragment[BigLegalPage, String, String](
 
 Each of the above results in a `Route[Page, Args]` with the precise types. You can ask these routes to parse `argsFromPage`, get `relativeUrlForPage`, `pageForAbsoluteUrl`, or `pageForRelativeUrl`. But normally you would build a Router like we did in [Rendering Views](#rendering-views), passing it a list of all the routes you created.
 
-Then you can change the document URL with `router.pushState(newPage)` and `router.replaceState(newPage)`, as well as get URLs for pages with `router.absoluteUrlForPage` and `router.relativeUrlForPage` (e.g. if you want to put that URL in a href attribute). You can even ask the router what Page, if any, matches a given url with `router.pageForAbsoluteUrl` or `router.pageForRelativeUrl`, or react to URL changes by listening to `router.$currentPage` signal (it's a StrictSignal so its current value is always available at `router.$currentPage.now()`).
+Then you can change the document URL with `router.pushState(newPage)` and `router.replaceState(newPage)`, as well as get URLs for pages with `router.absoluteUrlForPage` and `router.relativeUrlForPage` (e.g. if you want to put that URL in a href attribute). You can even ask the router what Page, if any, matches a given url with `router.pageForAbsoluteUrl` or `router.pageForRelativeUrl`, or react to URL changes by listening to `router.currentPageSignal` (it's a StrictSignal so its current value is always available at `router.currentPageSignal.now()`).
 
 
 
@@ -311,11 +314,11 @@ Note that URL DSL offers a basic way to match the fragment string in the URL (ev
 
 ### Failing to Match Routes
 
-If none of the routes match on initial page load, you can still render a page using `routeFallback` constructor param. The URL will not be updated, but `router.$currentPage` will emit the resulting page. If routeFallback throws, which is the default behaviour, `router.$currentPage` will be put into error state. If you want to throw for logging purposes, but don't want this to happen, return the current page and throw inside a setTimeout.
+If none of the routes match on initial page load, you can still render a page using `routeFallback` constructor param. The URL will not be updated, but `router.currentPageSignal` will emit the resulting page. If routeFallback throws, which is the default behaviour, `router.currentPageSignal` will be put into error state. If you want to throw for logging purposes, but don't want this to happen, return the current page and throw inside a setTimeout.
 
 Similarly, if during user's navigation we encounter a History API state record that `deserializePage` throws on, you can handle it using `deserializeFallback`. It throws too by default, with the same effect as `routeFallback`.
 
-`router.$currentPage` can also be in an errored state if the initial URL does not match the origin. Both of those are taken from `dom.window.location` by default so this shouldn't be an issue.
+`router.currentPageSignal` can also be in an errored state if the initial URL does not match the origin. Both of those are taken from `dom.window.location` by default so this shouldn't be an issue.
 
 
 ### Rendering Error Pages
@@ -371,7 +374,7 @@ Note that you can put Waypoint's `Route` in `shared`, so if you were so inclined
 
 Normally when navigating on the internet, users click on `<a href="url">` links, and the browser navigates them to `url`. This results in the target page being loaded from scratch, which is fine for content sites but is slow and inefficient for interactive, single page application (SPA) sites.
 
-So when the user clicks a link in a single page application, you want to hijack that click – prevent the default browser action, and instead use Waypoint to `pushState` the new page. This will update the URL but instead of loading a new page from the web server, `router.$currentPage` will emit a new page, and your application will respond to that without network overhead.
+So when the user clicks a link in a single page application, you want to hijack that click – prevent the default browser action, and instead use Waypoint to `pushState` the new page. This will update the URL but instead of loading a new page from the web server, `router.currentPageSignal` will emit a new page, and your application will respond to that without network overhead.
 
 In Laminar that can be achieved with a simple set of modifiers:
 
@@ -436,7 +439,7 @@ When initializing the router on page load, we parse the initial URL and emit the
 
 However, as soon as you navigate to a different page by means of `pushState(page)` or `replaceState(page)`, the URL will be updated to the canonical URL of the next page, with any extraneous query params removed.
 
-If you want the initial URL canonicalized (as was done automatically prior to Waypoint 0.4.0), call `router.replaceState(router.$currentPage.now())` on page load.
+If you want the initial URL canonicalized (as was done automatically prior to Waypoint 0.4.0), call `router.replaceState(router.currentPageSignal.now())` on page load.
 
 If you need to manage large numbers of common query params, consider using [ContextRouteBuilder](#contextroutebuilder)
 
@@ -445,9 +448,11 @@ If you need to manage large numbers of common query params, consider using [Cont
 
 ## Waypoint Without Laminar
 
-Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstream.
+Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstream. You can use it with other Scala.js UI libraries too.
 
-All you need to use Waypoint without Laminar is provide a stream of `dom.OnPopState` events, which is very easy, just make one using Airstream's `DomEventStream`.
+To use Waypoint without Laminar, you will need to provide a stream of `dom.OnPopState` events, which is very easy, just make one using Airstream's `DomEventStream`.
+
+Of course, if you want to react to URL changes, you will also need a way to consume the observables provided by Waypoint, such as `router.currentPageSignal`. Doing this properly will require some basic knowledge of Airstream. If you use a different streaming library, it's possible to interop between the two. I can help you do that if you agree to open source the resulting integration (does not need to be a polished library, just sample code / gist is fine).
 
 
 

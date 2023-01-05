@@ -1,5 +1,7 @@
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
+// Get Maven releases faster
+resolvers ++= Resolver.sonatypeOssRepos("public")
 
 // -- Projects
 
@@ -56,6 +58,9 @@ lazy val jsSettings = Seq(
   },
   scalaJSLinkerConfig ~= { _.withSourceMap(false) },
   (Test / requireJsDomEnv) := true,
+  (installJsdom / version) := Versions.JsDom,
+  (webpack / version) := Versions.Webpack,
+  (startWebpackDevServer / version) := Versions.WebpackDevServer,
   useYarn := true
 )
 
@@ -84,38 +89,11 @@ lazy val releaseSettings = Seq(
       url = url("http://raquo.com")
     )
   ),
-  sonatypeProfileName := "com.raquo",
-  publishMavenStyle := true,
   (Test / publishArtifact) := false,
-  publishTo := sonatypePublishToBundle.value,
-  releaseCrossBuild := true,
-  pomIncludeRepository := { _ => false },
-  releasePublishArtifactsAction := PgpKeys.publishSigned.value
+  pomIncludeRepository := { _ => false }
 )
-
-// @TODO Does this need to be here too?
-releaseCrossBuild := true
-
-releaseProcess := {
-  import ReleaseTransformations._
-  Seq[ReleaseStep](
-    checkSnapshotDependencies,
-    inquireVersions,
-    runClean,
-    runTest,
-    setReleaseVersion,
-    commitReleaseVersion,
-    tagRelease,
-    releaseStepCommandAndRemaining("+publishSigned"),
-    releaseStepCommand("sonatypeBundleRelease"),
-    setNextVersion,
-    commitNextVersion,
-    pushChanges
-  )
-}
 
 val noPublish = Seq(
   (publish / skip) := true,
-  (publishLocal / skip) := true,
-  publishTo := Some(Resolver.file("Unused transient repository", file("target/unusedrepo")))
+  (publishLocal / skip) := true
 )

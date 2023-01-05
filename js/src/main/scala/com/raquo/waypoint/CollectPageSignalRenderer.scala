@@ -13,7 +13,7 @@ sealed class CollectPageSignalRenderer[InPage, OutPage, +View] private[waypoint]
   render: Signal[OutPage] => View
 ) extends Renderer[InPage, View] {
 
-  // @TODO[Integrity] Because we don't have collect on Signal, this emits events in a different Transaction than the original $page Signal.
+  // @TODO[Integrity] Because we don't have collect on Signal, this emits events in a different Transaction than the original page Signal.
   //  If / when we have Signal.collect, we should re-implement this in its terms.
 
   private[this] var signalVar: Var[OutPage] = null

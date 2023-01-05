@@ -3,9 +3,10 @@ package com.raquo.waypoint
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api.L
+import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
 import com.raquo.waypoint.fixtures.AppPage.LibraryPage
+import org.scalactic
 import org.scalatest.Assertion
 import upickle.default._
 
@@ -117,7 +118,7 @@ class DynamicRouteSpec extends UnitSpec {
     serializePage = page => write(page)(AppPage.rw),
     deserializePage = pageStr => read(pageStr)(AppPage.rw)
   )(
-    $popStateEvent = L.windowEvents.onPopState,
+    popStateEvents = L.windowEvents(_.onPopState),
     owner = testOwner,
     origin = origin,
     initialUrl = origin + "/app/library/700"
@@ -195,8 +196,8 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(searchRoute, origin, "/search?query=hello+world", Some(SearchPage("hello+world"))) // @TODO[API] Not sure what we want to do with "+". Use %20 to encode space
 
     expectPageRelative(searchRoute, origin, "/search?query=one&query=two", Some(SearchPage("one"))) // @TODO[API] Not sure if desirable. Use `listParam` instead of `param` if you expect this.
-    expectPageRelative(searchRoute, origin, "/search?query=", None) // @TODO[API] This should probably catch an empty string
-    expectPageRelative(searchRoute, origin, "/search?query", None) // @TODO[API] Might want to create a matcher for value-less keys
+    expectPageRelative(searchRoute, origin, "/search?query=", Some(SearchPage("")))
+    expectPageRelative(searchRoute, origin, "/search?query", Some(SearchPage(""))) // @TODO[API] Not sure if catching this is desirable. I guess?
     expectPageRelative(searchRoute, origin, "/othersearch?query=sugar", None)
   }
 
@@ -209,8 +210,8 @@ class DynamicRouteSpec extends UnitSpec {
 
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/123/?query=hello", Some(WorkspaceSearchPage("123", "hello"))) // @TODO[API] Not sure if we want to catch this trailing slash
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query=one&query=two", Some(WorkspaceSearchPage("123", "one"))) // @TODO[API] Not sure if desirable. Use `listParam` instead of `param` if you expect this.
-    expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query=", None) // @TODO[API] This should probably catch an empty string
-    expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query", None) // @TODO[API] Might want to create a matcher for value-less keys
+    expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query=", Some(WorkspaceSearchPage("123", "")))
+    expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query", Some(WorkspaceSearchPage("123", ""))) // @TODO[API] Not sure if catching this is desirable. I guess?
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/123/search?query=sugar", None)
 
     expectPageRelative(workspaceSearchRoute, origin, "/workspace?query=sugar", None)
@@ -281,30 +282,6 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(DocsPage(NumPage(-123))) shouldBe Some("/docs/num/-123")
     urlForPage(DocsPage(NumPage(0))) shouldBe Some("/docs/zero/0")
     urlForPage(DocsPage(NumPage(50))) shouldBe None
-  }
-
-  def expectPageAbsolute(route: Route[_, _], origin: String, url: String, expectedPage: Option[AppPage]): Assertion = {
-    withClue("expectPageAbsolute: " + url + " ? " + expectedPage.toString + "\n") {
-      Try(route.pageForAbsoluteUrl(origin, url)) shouldBe Success(expectedPage)
-    }
-  }
-
-  def expectPageRelative(route: Route[_, _], origin: String, url: String, expectedPage: Option[AppPage]): Assertion = {
-    withClue("expectPageRelative: " + url + " ? " + expectedPage.toString + "\n") {
-      Try(route.pageForRelativeUrl(origin, url)) shouldBe Success(expectedPage)
-    }
-  }
-
-  def expectPageAbsoluteFailure(route: Route[_, _], origin: String, url: String): Assertion = {
-    withClue("expectPageAbsoluteFailure: " + url + " ? failure\n") {
-      Try(route.pageForAbsoluteUrl(origin, url)).toOption shouldBe None
-    }
-  }
-
-  def expectPageRelativeFailure(route: Route[_, _], origin: String, url: String): Assertion = {
-    withClue("expectPageRelativeFailure: " + url + " ? failure\n") {
-      Try(route.pageForRelativeUrl(origin, url)).toOption shouldBe None
-    }
   }
 
   // @TODO[Test] >>>

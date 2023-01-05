@@ -50,5 +50,9 @@ object AppPage {
   implicit val bigLegalPageRW: ReadWriter[BigLegalPage] = macroRW
   implicit val hugeLegalPageRW: ReadWriter[HugeLegalPage] = macroRW
 
+  implicit val loginPageRW: ReadWriter[LoginPage.type] = macroRW
+  implicit val signupPageRW: ReadWriter[SignupPage.type] = macroRW
+  implicit val homePageRW: ReadWriter[HomePage.type] = macroRW
+
   implicit val rw: ReadWriter[AppPage] = macroRW
 }

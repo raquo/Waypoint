@@ -1,20 +1,30 @@
 object Versions {
 
-  val Scala_2_12 = "2.12.15"
+  val Scala_2_12 = "2.12.17"
 
-  val Scala_2_13 = "2.13.8"
+  val Scala_2_13 = "2.13.10"
 
-  val Scala_3 = "3.1.0"
+  val Scala_3 = "3.2.0"
 
-  val ScalaJsDom = "2.1.0"
+  // -- Dependencies --
 
-  val UrlDsl = "0.4.1"
+  val Airstream = "15.0.0-M1"
 
-  val Airstream = "0.14.3-SNAPSHOT"
+  val UrlDsl = "0.5.0"
 
-  val Laminar = "0.14.3-SNAPSHOT" // Only used in Test
+  val ScalaJsDom = "2.3.0"
 
-  val Upickle = "1.5.0"
+  // -- Test --
 
-  val ScalaTest = "3.2.10"
+  val Laminar = "15.0.0-M1"
+
+  val Upickle = "2.0.0"
+
+  val ScalaTest = "3.2.14"
+
+  val JsDom = "20.0.3"
+
+  val Webpack = "5.75.0"
+
+  val WebpackDevServer = "4.11.1"
 }
