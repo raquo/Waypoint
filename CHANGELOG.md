@@ -4,9 +4,13 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v6.0.0-M2 – Jan 2023
+
+* **Build: Update Airstream to 15.0.0-M2**
+
 #### v6.0.0-M1 – Jan 2023
 
-* **Build: Update Airstream to 15.0.0, URL-DSL to 0.5.0, etc.**
+* **Build: Update Airstream to 15.0.0-M1, URL-DSL to 0.5.0, etc.**
 * **Naming: `$popStateEvent` -> `popStateEvents`**
 * **Naming: `$currentPage` -> `currentPageSignal`**
 * **Naming: `$view` -> `signal`**
