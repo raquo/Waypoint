@@ -4,6 +4,10 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v6.0.0-M3 – Jan 2023
+
+* **Build: Update Airstream to 15.0.0-M3**
+
 #### v6.0.0-M2 – Jan 2023
 
 * **Build: Update Airstream to 15.0.0-M2**
