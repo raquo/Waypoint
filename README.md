@@ -12,7 +12,7 @@ Waypoint can be used with other Scala.js libraries too, not just Laminar. More o
 
 Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
 
-    "com.raquo" %%% "waypoint" % "6.0.0-M3"   // Requires Airstream 15.0.0-M3 & URL DSL 0.5.0
+    "com.raquo" %%% "waypoint" % "6.0.0-M4"   // Requires Airstream 15.0.0-M4 & URL DSL 0.5.0
 
 
 
