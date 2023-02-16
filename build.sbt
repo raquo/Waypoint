@@ -1,7 +1,19 @@
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
+import VersionHelper.{versionFmt, fallbackVersion}
 
 // Get Maven releases faster
 resolvers ++= Resolver.sonatypeOssRepos("public")
+
+// Makes sure to increment the version for local development
+ThisBuild / version := dynverGitDescribeOutput.value
+  .mkVersion(out => versionFmt(out, dynverSonatypeSnapshots.value), fallbackVersion(dynverCurrentDate.value))
+
+ThisBuild / dynver := {
+  val d = new java.util.Date
+  sbtdynver.DynVer
+    .getGitDescribeOutput(d)
+    .mkVersion(out => versionFmt(out, dynverSonatypeSnapshots.value), fallbackVersion(d))
+}
 
 // -- Projects
 
