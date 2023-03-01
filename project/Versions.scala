@@ -8,7 +8,7 @@ object Versions {
 
   // -- Dependencies --
 
-  val Airstream = "15.0.0-M4"
+  val Airstream = "15.0.0-M5"
 
   val UrlDsl = "0.5.0"
 
@@ -16,7 +16,7 @@ object Versions {
 
   // -- Test --
 
-  val Laminar = "15.0.0-M5"
+  val Laminar = "15.0.0-M7"
 
   val Upickle = "2.0.0"
 

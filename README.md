@@ -460,6 +460,8 @@ Of course, if you want to react to URL changes, you will also need a way to cons
 
 Nikita Gazarov – [@raquo](https://twitter.com/raquo)
 
+[Sponsor my open source work](https://github.com/sponsors/raquo).
+
 
 
 ## License & Credits
