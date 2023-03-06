@@ -93,9 +93,9 @@ render(
 
 This works, you just need to call `router.pushState(page)` or `router.replaceState(page)` somewhere to trigger the URL changes, and the view will update to show which page was selected.
 
-However, as you know, this rendering is not efficient in Laminar by design. Every time `router.currentPageSignal` is updated, renderPage is called, creating a whole new element. Not a big deal at all in this toy example, but in the real world it would be re-creating your whole app's DOM tree on every URL change. That is simply unacceptable.
+However, as you know, this rendering is not efficient in Laminar by design. Every time `router.currentPageSignal` is updated, `renderPage` is called, creating a whole new element. Not a big deal at all in this toy example, but in the real world it would be re-creating your whole app's DOM tree on every URL change. That is simply unacceptable.
 
-You can improve the efficiency of this using Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/docs/Documentation.md#performant-children-rendering--split) operator, but this will prove cumbersome if your app has many different Page types. Waypoint provides a convenient but somewhat opinionated helper to solve this problem:
+You can improve the efficiency of this using Airstream's [`split` operator](https://laminar.dev/documentation#performant-children-rendering--split), but this will prove cumbersome if your app has many different Page types. Waypoint provides a convenient but somewhat opinionated helper to solve this problem:
 
 ```scala
 val splitter = SplitRender[Page, HtmlElement](router.currentPageSignal)
@@ -448,11 +448,11 @@ If you need to manage large numbers of common query params, consider using [Cont
 
 ## Waypoint Without Laminar
 
-Perhaps ironically, Waypoint does not actually depend on Laminar, only on Airstream. You can use it with other Scala.js UI libraries too.
+Waypoint does not actually depend on Laminar, only on Airstream. You can use it with other Scala.js UI libraries too.
 
-To use Waypoint without Laminar, you will need to provide a stream of `dom.OnPopState` events, which is very easy, just make one using Airstream's `DomEventStream`.
+To use Waypoint without Laminar, you will need to provide a stream of `dom.OnPopState` events, which is very easy even without Laminar, just make one using Airstream's `DomEventStream`.
 
-Of course, if you want to react to URL changes, you will also need a way to consume the observables provided by Waypoint, such as `router.currentPageSignal`. Doing this properly will require some basic knowledge of Airstream. If you use a different streaming library, it's possible to interop between the two. I can help you do that if you agree to open source the resulting integration (does not need to be a polished library, just sample code / gist is fine).
+Of course, if you want to react to URL changes, you will also need a way to consume the observables provided by Waypoint, such as `router.currentPageSignal`. Doing this properly will require some basic knowledge of Airstream. If you use a different streaming library, it should be possible to interop between the two. I can help you do that if you agree to open source the resulting integration (does not need to be a polished library, just sample code / gist is fine).
 
 
 
