@@ -123,7 +123,7 @@ In the previous, "naive" example, we were creating a new div element every time 
 
 And this is exactly what `SplitRender.collectSignal` lets you do: it provides you a refined `Signal[UserPage]` instead of `Signal[Page]`, and it's trivial to build a single div that uses that `userPageSignal` like we do.
 
-*Note*: Scala 3 enum instances are typed as enum type, so `ClassTag` cannot distinguish them, as a result always the first renderer would match. To fix this use `sealed trait` instead.
+**WARNING**: Scala 3 enum instances are typed as enum type, so `ClassTag` cannot distinguish them and as a result always the first renderer would match. To fix this use `sealed trait` instead for your page ADT.
 
 ## Page Hierarchy
 
