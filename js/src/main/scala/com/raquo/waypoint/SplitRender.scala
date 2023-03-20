@@ -1,7 +1,8 @@
 package com.raquo.waypoint
 
+// #TODO Test all this
+
 import com.raquo.airstream.core.Signal
-import scala.annotation.unused
 import scala.reflect.ClassTag
 
 case class SplitRender[Page, View](
@@ -16,13 +17,13 @@ case class SplitRender[Page, View](
   }
 
   /** Just a convenience method for static pages. `page` is expected to be an `object`. */
-  def collectStatic[P <: Page : ClassTag](@unused page: P)(view: => View): SplitRender[Page, View] = {
-    collect[P](_ => view)
+  def collectStatic[P <: Page](page: P)(view: => View): SplitRender[Page, View] = {
+    collectStaticPF { case `page` => view }
   }
 
   /** Similar to `collectStatic`, but evaluates `view` only once, when this method is called. */
-  def collectStaticStrict[P <: Page : ClassTag](@unused page: P)(view: View): SplitRender[Page, View] = {
-    collect[P](_ => view)
+  def collectStaticStrict[P <: Page](page: P)(view: View): SplitRender[Page, View] = {
+    collectStaticPF { case `page` => view }
   }
 
   // @TODO[Naming] This is really the PF equivalent of collectStatic, right...?
