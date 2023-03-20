@@ -8,9 +8,9 @@ object Versions {
 
   // -- Dependencies --
 
-  val Airstream = "15.0.0-M5"
+  val Airstream = "15.0.0"
 
-  val UrlDsl = "0.5.0"
+  val UrlDsl = "0.6.0"
 
   val ScalaJsDom = "2.3.0"
 

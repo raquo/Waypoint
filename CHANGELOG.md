@@ -4,6 +4,11 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v6.0.0 – Mar 2023
+
+* **Build: Update Airstream to 15.0.0, URL DSL to 0.6.0**
+* Fix: `collectStatic` and `collectStaticStrict` now match pages using `==` equality instead of ClassTag. This fixes matching of Scala 3 enum values.
+
 #### v6.0.0-M4 – Feb 2023
 
 * **Build: Update Airstream to 15.0.0-M4**

@@ -12,7 +12,7 @@ Waypoint can be used with other Scala.js libraries too, not just Laminar. More o
 
 Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
 
-    "com.raquo" %%% "waypoint" % "6.0.0-M4"   // Requires Airstream 15.0.0-M4 & URL DSL 0.5.0
+    "com.raquo" %%% "waypoint" % "6.0.0"   // Depends on Airstream 15.0.0 & URL DSL 0.6.0
 
 
 
@@ -129,7 +129,7 @@ And this is exactly what `SplitRender.collectSignal` lets you do: it provides yo
 
 SplitRender's `collect` and `collectSignal` use Scala's [ClassTag](https://medium.com/@sinisalouc/overcoming-type-erasure-in-scala-8f2422070d20) to refine the general `Page` type into more specialized `UserPage`. You need to understand the limitations of ClassTag: it is only able to differentiate top level types, so in general your page types should not have type params, or if they do, you should know the limitations on matching those types with ClassTag.
 
-To make the best use of SplitRender, you should make a base `Page` trait and have each of your pages as a distinct subclass. Static pages that carry no arguments can be `object`s, you can use SplitRender's `collectStatic` method to match them, it uses basic equality instead of ClassTag.
+To make the best use of SplitRender, you should make a base `Page` trait and have each of your pages as a distinct subclass. Static pages that carry no arguments can be `object`s, you can use SplitRender's `collectStatic` method to match them, it uses standard `==` value equality instead of `ClassTag`.
 
 As your application grows you will likely have more than one level to your Page hierarchy. For example, you could have:
 
