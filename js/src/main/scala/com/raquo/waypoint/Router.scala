@@ -288,6 +288,6 @@ object Router {
     * This helper fixes this discrepancy.
     */
   private val canonicalDocumentOrigin: String = {
-    if (dom.document.location.protocol == "file:") "file://" else dom.document.location.origin.get
+    if (dom.document.location.protocol == "file:") "file://" else dom.document.location.origin
   }
 }

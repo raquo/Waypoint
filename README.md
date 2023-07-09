@@ -12,7 +12,7 @@ Waypoint can be used with other Scala.js libraries too, not just Laminar. More o
 
 Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
 
-    "com.raquo" %%% "waypoint" % "6.0.0"   // Depends on Airstream 15.0.0 & URL DSL 0.6.0
+    "com.raquo" %%% "waypoint" % "7.0.0"   // Depends on Airstream 16.0.0 & URL DSL 0.6.0
 
 
 
@@ -425,7 +425,7 @@ If a Waypoint error message pointed you to this section of the docs, that means 
 To work around this, you should use something like this:
 
 ```scala
-def canonicalOrigin = if (dom.document.location.protocol == "file:") "file://" else dom.document.location.origin.get
+def canonicalOrigin = if (dom.document.location.protocol == "file:") "file://" else dom.document.location.origin
 ```
 
 or just use `router.origin` which is derived from `dom.document.location` in the same manner (unless you overrode the Router's `origin` constructor param).
