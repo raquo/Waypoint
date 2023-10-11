@@ -161,7 +161,7 @@ class Router[BasePage](
       url = route.relativeUrlForPage(page)
       url.isDefined
     }
-    url.getOrElse(throw new Exception("Router has no route for this page"))
+    url.getOrElse(throw new Exception(s"Router has no route for this page: $page"))
   }
 
   // @TODO[Naming] Rename {push,replace}State to {push,replace}Page?
@@ -179,7 +179,7 @@ class Router[BasePage](
     routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = true, fromPopState = false)))
   }
 
-  /** Forces router.\$currentPage to emit this page without updating the URL or touching the history records.
+  /** Forces router.currentPageSignal to emit this page without updating the URL or touching the history records.
     *
     * Use this to display a full screen "not found" page when the route matched but is invalid
     * for example because /user/123 refers to a non-existing user, something that you can't
