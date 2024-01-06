@@ -62,7 +62,7 @@ lazy val jsSettings = Seq(
     "com.raquo" %%% "laminar" % Versions.Laminar % Test
   ),
   scalacOptions ++= sys.env.get("CI").map { _ =>
-    val localSourcesPath = baseDirectory.value.toURI
+    val localSourcesPath = (LocalRootProject / baseDirectory).value.toURI
     val remoteSourcesPath = s"https://raw.githubusercontent.com/raquo/Waypoint/${git.gitHeadCommit.value.get}/"
     val sourcesOptionName = if (scalaVersion.value.startsWith("2.")) "-P:scalajs:mapSourceURI" else "-scalajs-mapSourceURI"
 
