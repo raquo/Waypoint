@@ -342,7 +342,7 @@ So, `router.forcePage` is often the preferred way.
 
 Suppose you want to "remember" vertical scroll position on a certain page, so that when you navigate away from it and then come back, it's restored. Instead of maintaining complex global variables or cookies or whatever, just include this information in the Page.
 
-Pages are serialized into History API state records, so when the user uses browser back button to come back to a page that he's already been to, it's not just the old URL that's restored, it's the whole Page state. On the contrary, if the user reloads the page or clicks a link that causes a page load instead of the History API transition, the Page state will be parsed from the URL, and since the URL does not include scroll position in our case, that will need to be the default scroll position of zero.
+Pages are serialized into History API state records, so when the user uses browser back button to come back to a page that they've already been to, it's not just the old URL that's restored, it's the whole Page state. On the contrary, if the user reloads the page or clicks a link that causes a page load instead of the History API transition, the Page state will be parsed from the URL, and since the URL does not include scroll position in our case, that will need to be the default scroll position of zero.
 
 ```scala
 Route[NotePage, (Int, Int)](

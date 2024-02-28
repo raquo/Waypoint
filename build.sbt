@@ -68,7 +68,6 @@ lazy val jsSettings = Seq(
 
     s"${sourcesOptionName}:$localSourcesPath->$remoteSourcesPath"
   },
-  scalaJSLinkerConfig ~= { _.withSourceMap(false) },
   (Test / requireJsDomEnv) := true,
   (installJsdom / version) := Versions.JsDom,
   (webpack / version) := Versions.Webpack,
@@ -83,8 +82,8 @@ lazy val releaseSettings = Seq(
   name := "Waypoint",
   normalizedName := "waypoint",
   organization := "com.raquo",
-  scalaVersion := Versions.Scala_2_13,
-  crossScalaVersions := Seq(Versions.Scala_3, Versions.Scala_2_13, Versions.Scala_2_12),
+  scalaVersion := Versions.Scala_3,
+  crossScalaVersions := Seq(Versions.Scala_3, Versions.Scala_2_13),
   homepage := Some(url("https://github.com/raquo/waypoint")),
   licenses += ("MIT", url("https://github.com/raquo/waypoint/blob/master/LICENSE.md")),
   scmInfo := Some(
