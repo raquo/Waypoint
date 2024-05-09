@@ -1,20 +1,20 @@
 object Versions {
 
-  val Scala_2_13 = "2.13.12"
+  val Scala_2_13 = "2.13.14"
 
   val Scala_3 = "3.3.1"
 
   // -- Dependencies --
 
-  val Airstream = "17.0.0-RC1"
+  val Airstream = "17.0.0"
 
-  val UrlDsl = "0.6.0"
+  val UrlDsl = "0.6.1"
 
   val ScalaJsDom = "2.8.0"
 
   // -- Test --
 
-  val Laminar = "17.0.0-RC1"
+  val Laminar = "17.0.0"
 
   val Upickle = "2.0.0"
 
