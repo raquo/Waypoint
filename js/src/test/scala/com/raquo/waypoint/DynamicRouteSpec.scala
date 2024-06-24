@@ -18,49 +18,49 @@ class DynamicRouteSpec extends UnitSpec {
 
   val origin = "http://example.com"
 
-  val libraryRoute: Route[LibraryPage, Int] = Route(
+  val libraryRoute: Route.Total[LibraryPage, Int] = Route(
     encode = _.libraryId,
     decode = arg => LibraryPage(libraryId = arg),
     pattern = root / "app" / "library" / segment[Int] / endOfSegments
   )
 
-  val textRoute: Route[TextPage, String] = Route(
+  val textRoute: Route.Total[TextPage, String] = Route(
     encode = _.text,
     decode = arg => TextPage(text = arg),
     pattern = root / "app" / "test" / segment[String] / endOfSegments
   )
 
-  val noteRoute: Route[NotePage, (Int, Int)] = Route(
+  val noteRoute: Route.Total[NotePage, (Int, Int)] = Route(
     encode = page => (page.libraryId, page.noteId),
     decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
     pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments
   )
 
-  val searchRoute: Route[SearchPage, String] = Route.onlyQuery(
+  val searchRoute: Route.Total[SearchPage, String] = Route.onlyQuery(
     encode = page => page.query,
     decode = arg => SearchPage(arg),
     pattern = (root / "search" / endOfSegments) ? param[String]("query")
   )
 
-  val workspaceSearchRoute: Route[WorkspaceSearchPage, PatternArgs[String, String]] = Route.withQuery(
+  val workspaceSearchRoute: Route.Total[WorkspaceSearchPage, PatternArgs[String, String]] = Route.withQuery(
     encode = page => PatternArgs(page.workspaceId, page.query),
     decode = args => WorkspaceSearchPage(workspaceId = args.path, query = args.params),
     pattern = (root / "workspace" / segment[String] / endOfSegments) ? param[String]("query")
   )
 
-  val legalRoute: Route[LegalPage, String] = Route.onlyFragment(
+  val legalRoute: Route.Total[LegalPage, String] = Route.onlyFragment(
     encode = page => page.section,
     decode = arg => LegalPage(arg),
     pattern = (root / "legal" / endOfSegments) withFragment fragment[String]
   )
 
-  val bigLegalRoute: Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
+  val bigLegalRoute: Route.Total[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
     encode = page => FragmentPatternArgs(path = page.page, (), fragment = page.section),
     decode = args => BigLegalPage(page = args.path, section = args.fragment),
     pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String]
   )
 
-  val hugeLegalRoute: Route[HugeLegalPage, FragmentPatternArgs[String, Int, String]] = Route.withQueryAndFragment(
+  val hugeLegalRoute: Route.Total[HugeLegalPage, FragmentPatternArgs[String, Int, String]] = Route.withQueryAndFragment(
     encode = page => FragmentPatternArgs(path = page.page, query = page.version, fragment = page.section),
     decode = args => HugeLegalPage(page = args.path, version = args.query, section = args.fragment),
     pattern = (root / "legal" / segment[String] / endOfSegments) ? param[Int]("version") withFragment fragment[String]
