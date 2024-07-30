@@ -176,7 +176,7 @@ def renderNotePage(notePageSignal: Signal[NotePage]): Div = {
  
 val app: Div = div(
   h1("Routing App"),
-  child <-- splitter.signal
+  child <-- pageSplitter.signal
 )
 ```
 
