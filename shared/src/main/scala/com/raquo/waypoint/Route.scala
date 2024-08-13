@@ -457,19 +457,54 @@ object Route {
     )
   }
 
-  /** Create a route for a static page that does not encode any data in the URL */
+  /** Create a route for a static page that does not encode any data in the URL.
+    *
+    * Take note that this returns a [[Partial]] route and you might want to use [[staticTotal]] instead.
+    * */
   def static[Page](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
     basePath: String = ""
-  ): Total[staticPage.type, Unit] = {
-    Total[staticPage.type, Unit](
+  ): Partial[Page, Unit] = {
+    new Partial[Page, Unit](
+      matchEncodePF = { case p if p == staticPage => () },
+      decodePF = { case _ => staticPage },
+      createRelativeUrl = args => "/" + pattern.createPath(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath
+    )
+  }
+
+  /** Create a route for a static page that does not encode any data in the URL.
+    *
+    * Note that this is only a total route when the [[Page]] type refers to an object type. For example, this is OK:
+    * {{{
+    * object Foo extends AppPage
+    *
+    * val route: Total[Foo.type, Unit] = Route.staticTotal(Foo, root / "foo" / endOfSegments)
+    * }}}
+    *
+    * However, it is possible to create a route which is not actually total:
+    * {{{
+    * object Foo extends AppPage
+    *
+    * val route: Total[AppPage, Unit] = Route.staticTotal[AppPage](Foo, root / "foo" / endOfSegments)
+    * }}}
+    *
+    * This will think that it can route any `AppPage`, however it will not. Use [[static]] for those cases instead.
+    * */
+  def staticTotal[Page](
+    staticPage: Page,
+    pattern: PathSegment[Unit, DummyError],
+    basePath: String = ""
+  ): Total[Page, Unit] = {
+    Total[Page, Unit](
       encode = _ => (),
       decode = _ => staticPage,
       createRelativeUrl = args => "/" + pattern.createPath(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
       basePath = basePath,
-      klass = staticPage.getClass.asInstanceOf[Class[staticPage.type]]
+      klass = staticPage.getClass.asInstanceOf[Class[Page]]
     )
   }
 

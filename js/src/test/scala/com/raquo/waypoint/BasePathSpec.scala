@@ -33,7 +33,7 @@ class BasePathSpec extends UnitSpec {
 
       describe(s"basePath = `$basePath`") {
 
-        val homeRoute: Route.Total[HomePage.type, Unit] = Route.static(
+        val homeRoute: Route.Total[HomePage.type, Unit] = Route.staticTotal(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
