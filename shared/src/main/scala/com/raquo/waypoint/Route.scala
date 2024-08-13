@@ -117,23 +117,39 @@ object Route {
   /**
    * A total route is a route that can always translate a [[Page]] into a [[Args]] and vice versa.
    */
-  class Total[Page : ClassTag, Args] private[waypoint](
+  class Total[Page, Args] private[waypoint](
     encode: Page => Args,
     decode: Args => Page,
+    matchEncodePF: PartialFunction[Any, Args],
+    decodePF: PartialFunction[Args, Page],
     createRelativeUrl: Args => String,
     matchRelativeUrl: String => Option[Args],
     basePath: String
   ) extends Route[Page, Args](
-    matchEncodePF = { case p: Page => encode(p) },
-    decodePF = { case args => decode(args) },
-    createRelativeUrl = createRelativeUrl,
-    matchRelativeUrl = matchRelativeUrl, basePath = basePath
+    matchEncodePF, decodePF, createRelativeUrl, matchRelativeUrl, basePath
   ) {
     def argsFromPageTotal(page: Page): Args =
       encode(page)
 
     def relativeUrlForPage(page: Page): String =
       relativeUrlForArgs(encode(page))
+  }
+  object Total {
+    private[waypoint] def apply[Page, Args](
+      encode: Page => Args,
+      decode: Args => Page,
+      createRelativeUrl: Args => String,
+      matchRelativeUrl: String => Option[Args],
+      basePath: String,
+      klass: Class[Page]
+    ): Total[Page, Args] = new Total(
+      encode, decode,
+      matchEncodePF = { case p if klass.isInstance(p) => encode(klass.cast(p)) },
+      decodePF = { case args => decode(args) },
+      createRelativeUrl = createRelativeUrl,
+      matchRelativeUrl = matchRelativeUrl,
+      basePath = basePath
+    )
   }
 
   // @TODO[URL-DSL] We need better abstractions, like Args[P, Q, F] and UrlPart[P, Q, F].
@@ -149,12 +165,13 @@ object Route {
     pattern: PathSegment[Args, DummyError],
     basePath: String = ""
   ): Total[Page, Args] = {
-    applyRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = args => "/" + pattern.createPath(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   // @TODO[Naming] Not a fan of `applyPF`...
@@ -173,21 +190,14 @@ object Route {
     pattern: PathSegment[Args, DummyError],
     basePath: String = ""
   ): Partial[Page, Args] = {
-    applyRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
+      createRelativeUrl = args => "/" + pattern.createPath(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
       basePath = basePath
-    ))
+    )
   }
-
-  private def applyRouteBuilder[Args](
-    pattern: PathSegment[Args, DummyError],
-  ): RouteBuilder[Args] = new RouteBuilder(
-    createRelativeUrl = args => "/" + pattern.createPath(args),
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-  )
 
   /** Create a route with page data encoded in query params only */
   def onlyQuery[Page: ClassTag, QueryArgs](
@@ -196,12 +206,13 @@ object Route {
     pattern: PathSegmentWithQueryParams[Unit, DummyError, QueryArgs, DummyError],
     basePath: String = ""
   ): Total[Page, QueryArgs] = {
-    onlyQueryRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   /** Create a partial route with page data encoded in query params only
@@ -219,21 +230,14 @@ object Route {
     pattern: PathSegmentWithQueryParams[Unit, DummyError, QueryArgs, DummyError],
     basePath: String = ""
   ): Partial[Page, QueryArgs] = {
-    onlyQueryRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
+      createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
       basePath = basePath
-    ))
+    )
   }
-
-  private def onlyQueryRouteBuilder[QueryArgs](
-    pattern: PathSegmentWithQueryParams[Unit, DummyError, QueryArgs, DummyError],
-  ): RouteBuilder[QueryArgs] = new RouteBuilder(
-    createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
-  )
 
   /** Create a route with page data encoded in path segments and query params */
   def withQuery[Page: ClassTag, PathArgs, QueryArgs](
@@ -242,12 +246,13 @@ object Route {
     pattern: PathSegmentWithQueryParams[PathArgs, DummyError, QueryArgs, DummyError],
     basePath: String = ""
   ): Total[Page, PatternArgs[PathArgs, QueryArgs]] = {
-    withQueryRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   /** Create a partial route with page data encoded in path segments and query params
@@ -265,21 +270,14 @@ object Route {
     pattern: PathSegmentWithQueryParams[PathArgs, DummyError, QueryArgs, DummyError],
     basePath: String = ""
   ): Partial[Page, PatternArgs[PathArgs, QueryArgs]] = {
-    withQueryRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
+      createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
       basePath = basePath
-    ))
+    )
   }
-
-  private def withQueryRouteBuilder[PathArgs, QueryArgs](
-    pattern: PathSegmentWithQueryParams[PathArgs, DummyError, QueryArgs, DummyError],
-  ): RouteBuilder[PatternArgs[PathArgs, QueryArgs]] = new RouteBuilder(
-    createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-  )
 
   /** Create a route with page data encoded in query params only */
   def onlyFragment[Page: ClassTag, FragmentArgs](
@@ -288,12 +286,13 @@ object Route {
     pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentArgs] = {
-    onlyFragmentRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   /** Create a partial route with page data encoded in query params only
@@ -311,21 +310,14 @@ object Route {
     pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Partial[Page, FragmentArgs] = {
-    onlyFragmentRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
+      createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
       basePath = basePath
-    ))
+    )
   }
-
-  private def onlyFragmentRouteBuilder[FragmentArgs](
-    pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, DummyError, FragmentArgs, DummyError],
-  ): RouteBuilder[FragmentArgs] = new RouteBuilder(
-    createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
-  )
 
   /** Create a route with page data encoded in path segments and fragment */
   def withFragment[Page: ClassTag, PathArgs, FragmentArgs](
@@ -334,12 +326,16 @@ object Route {
     pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = {
-    withFragmentRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   /** Create a partial route with page data encoded in path segments and fragment
@@ -357,24 +353,17 @@ object Route {
     pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Partial[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = {
-    withFragmentRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
       basePath = basePath
-    ))
+    )
   }
-
-  private def withFragmentRouteBuilder[PathArgs, FragmentArgs](
-    pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, DummyError, FragmentArgs, DummyError],
-  ): RouteBuilder[FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = new RouteBuilder(
-    createRelativeUrl = { args =>
-      val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
-      "/" + pattern.createPart(patternArgs)
-    },
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-  )
 
   /** Create a route with page data encoded in query params and fragment */
   def onlyQueryAndFragment[Page: ClassTag, QueryArgs, FragmentArgs](
@@ -383,12 +372,16 @@ object Route {
     pattern: PathQueryFragmentRepr[Unit, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]] = {
-    onlyQueryAndFragmentRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   /** Create a partial route with page data encoded in query params and fragment
@@ -406,24 +399,17 @@ object Route {
     pattern: PathQueryFragmentRepr[Unit, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Partial[Page, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]] = {
-    onlyQueryAndFragmentRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
       basePath = basePath
-    ))
+    )
   }
-
-  private def onlyQueryAndFragmentRouteBuilder[QueryArgs, FragmentArgs](
-    pattern: PathQueryFragmentRepr[Unit, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
-  ): RouteBuilder[FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]] = new RouteBuilder(
-    createRelativeUrl = { args =>
-      val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
-      "/" + pattern.createPart(patternArgs)
-    },
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-  )
 
   /** Create a route with page data encoded in path segments, query params and fragment */
   def withQueryAndFragment[Page: ClassTag, PathArgs, QueryArgs, FragmentArgs](
@@ -432,12 +418,16 @@ object Route {
     pattern: PathQueryFragmentRepr[PathArgs, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]] = {
-    withQueryAndFragmentRouteBuilder(pattern)(b => new Total(
+    Total(
       encode, decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath,
+      klass = classFromClassTag
+    )
   }
 
   /** Create a partial route with page data encoded in path segments, query params and fragment
@@ -455,44 +445,34 @@ object Route {
     pattern: PathQueryFragmentRepr[PathArgs, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Partial[Page, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]] = {
-    withQueryAndFragmentRouteBuilder(pattern)(b => new Partial(
+    new Partial(
       matchEncodePF = matchEncode,
       decodePF = decode,
-      createRelativeUrl = b.createRelativeUrl,
-      matchRelativeUrl = b.matchRelativeUrl,
-      basePath = basePath
-    ))
-  }
-
-  private def withQueryAndFragmentRouteBuilder[PathArgs, QueryArgs, FragmentArgs](
-    pattern: PathQueryFragmentRepr[PathArgs, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError]
-  ): RouteBuilder[FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]] = new RouteBuilder(
-    createRelativeUrl = { args =>
-      val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
-      "/" + pattern.createPart(patternArgs)
-    },
-    matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption
-  )
-
-  /** Create a route for a static page that does not encode any data in the URL */
-  def static[Page: ClassTag](
-    staticPage: Page,
-    pattern: PathSegment[Unit, DummyError],
-    basePath: String = ""
-  ): Total[Page, Unit] = {
-    new Total[Page, Unit](
-      encode = _ => (),
-      decode = _ => staticPage,
-      createRelativeUrl = args => "/" + pattern.createPath(args),
+      createRelativeUrl = { args =>
+        val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
+        "/" + pattern.createPart(patternArgs)
+      },
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
       basePath = basePath
     )
   }
 
-  private class RouteBuilder[Args](
-    val createRelativeUrl: Args => String,
-    val matchRelativeUrl: String => Option[Args]
-  ) {
-    def apply[R](f: RouteBuilder[Args] => R): R = f(this)
+  /** Create a route for a static page that does not encode any data in the URL */
+  def static[Page](
+    staticPage: Page,
+    pattern: PathSegment[Unit, DummyError],
+    basePath: String = ""
+  ): Total[staticPage.type, Unit] = {
+    Total[staticPage.type, Unit](
+      encode = _ => (),
+      decode = _ => staticPage,
+      createRelativeUrl = args => "/" + pattern.createPath(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath,
+      klass = staticPage.getClass.asInstanceOf[Class[staticPage.type]]
+    )
   }
+
+  private def classFromClassTag[A](implicit ct: ClassTag[A]): Class[A] =
+    ct.runtimeClass.asInstanceOf[Class[A]]
 }
