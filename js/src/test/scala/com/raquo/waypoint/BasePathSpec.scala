@@ -33,7 +33,13 @@ class BasePathSpec extends UnitSpec {
 
       describe(s"basePath = `$basePath`") {
 
-        val homeRoute: Route.Total[HomePage.type, Unit] = Route.staticTotal(
+        val homeRoute: Route.Partial[HomePage.type, Unit] = Route.static(
+          HomePage,
+          pattern = root / endOfSegments,
+          basePath = basePath
+        )
+
+        val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.staticTotal(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
@@ -137,6 +143,7 @@ class BasePathSpec extends UnitSpec {
             textRoute,
             noteRoute,
             homeRoute,
+            homeRouteTotal,
             searchRoute,
             bigLegalRoute,
             bigNumRoute,
@@ -156,13 +163,18 @@ class BasePathSpec extends UnitSpec {
         )
 
         it("segment routes - parse urls - match") {
-          if (basePath.nonEmpty) {
-            expectPageRelative(homeRoute, origin, s"$basePath", Some(HomePage))
-          } else {
-            // (basePath + url) must be a relative URL, so if basePath is empty, url can't also be empty, it must start with `/`
-            expectPageRelativeFailure(homeRoute, origin, s"$basePath")
+          def testHomeRoute(homeRoute: Route[HomePage.type, Unit]) = {
+            if (basePath.nonEmpty) {
+              expectPageRelative(homeRoute, origin, s"$basePath", Some(HomePage))
+            } else {
+              // (basePath + url) must be a relative URL, so if basePath is empty, url can't also be empty, it must start with `/`
+              expectPageRelativeFailure(homeRoute, origin, s"$basePath")
+            }
+            expectPageRelative(homeRoute, origin, s"$basePath/", Some(HomePage))
           }
-          expectPageRelative(homeRoute, origin, s"$basePath/", Some(HomePage))
+
+          testHomeRoute(homeRoute)
+          testHomeRoute(homeRouteTotal)
 
           expectPageRelative(libraryRoute, origin, s"$basePath/app/library/1234", Some(LibraryPage(libraryId = 1234)))
           expectPageRelative(libraryRoute, origin, s"$basePath/app/library/100?hello=world", Some(LibraryPage(libraryId = 100)))
@@ -190,12 +202,14 @@ class BasePathSpec extends UnitSpec {
 
           expectPageRelative(libraryRoute, origin, "/app/library/1234", if (basePath.isEmpty) Some(LibraryPage(1234)) else None)
 
-          {
+          def testHomeRoute(homeRoute: Route[HomePage.type, Unit]) = {
             if (Utils.basePathHasEmptyFragment(basePath)) {
               val basePathWithoutFragment = Utils.basePathWithoutFragment(basePath)
               expectPageRelative(homeRoute, origin, s"$basePathWithoutFragment", Some(HomePage))
             }
           }
+          testHomeRoute(homeRoute)
+          testHomeRoute(homeRouteTotal)
 
           // @TODO[API] I mean... these are not absolute urls...
           expectPageAbsoluteFailure(libraryRoute, origin, "//app/library/1234")

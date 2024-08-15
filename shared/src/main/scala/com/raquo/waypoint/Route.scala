@@ -477,27 +477,15 @@ object Route {
 
   /** Create a route for a static page that does not encode any data in the URL.
     *
-    * Note that this is only a total route when the [[Page]] type refers to an object type. For example, this is OK:
-    * {{{
-    * object Foo extends AppPage
-    *
-    * val route: Total[Foo.type, Unit] = Route.staticTotal(Foo, root / "foo" / endOfSegments)
-    * }}}
-    *
-    * However, it is possible to create a route which is not actually total:
-    * {{{
-    * object Foo extends AppPage
-    *
-    * val route: Total[AppPage, Unit] = Route.staticTotal[AppPage](Foo, root / "foo" / endOfSegments)
-    * }}}
-    *
-    * This will think that it can route any `AppPage`, however it will not. Use [[static]] for those cases instead.
+    * This only allows using singleton types, like `object Foo`.
+    * 
+    * @see [[ValueOf]]
     * */
   def staticTotal[Page](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
     basePath: String = ""
-  ): Total[Page, Unit] = {
+  )(implicit valueOf: ValueOf[Page]): Total[Page, Unit] = {
     Total[Page, Unit](
       encode = _ => (),
       decode = _ => staticPage,
