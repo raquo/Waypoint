@@ -4,6 +4,20 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v8.0.1 – Aug 2024
+* Build: Update URL DSL to 0.6.2
+  * Fixed a case with `listParam` where matching failed if no query parameters were provided in the URL, whereas it should have matched as `Nil`. Thanks, [@arturaz](https://github.com/arturaz)!
+
+
+#### v8.0.0 – May 2024
+* **Build: Update Airstream to 17.0.0, URL DSL to 0.6.1**
+* Build: Fix source maps URLs
+* Misc: Unrouted page exception now includes the exact faulty page in the message
+
+#### v7.0.0 – Jul 2023
+* **Build: Update Airstream to 16.0.0**
+
+
 #### v6.0.0 – Mar 2023
 
 * **Build: Update Airstream to 15.0.0, URL DSL to 0.6.0**
