@@ -33,41 +33,47 @@ class BasePathSpec extends UnitSpec {
 
       describe(s"basePath = `$basePath`") {
 
-        val homeRoute: Route[HomePage.type, Unit] = Route.static(
+        val homeRoute: Route.Partial[HomePage.type, Unit] = Route.static(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
         )
 
-        val libraryRoute: Route[LibraryPage, Int] = Route(
+        val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.staticTotal(
+          HomePage,
+          pattern = root / endOfSegments,
+          basePath = basePath
+        )
+
+        val libraryRoute: Route.Total[LibraryPage, Int] = Route(
           encode = _.libraryId,
           decode = arg => LibraryPage(libraryId = arg),
           pattern = root / "app" / "library" / segment[Int] / endOfSegments,
           basePath = basePath
         )
 
-        val textRoute: Route[TextPage, String] = Route(
+        val textRoute: Route.Total[TextPage, String] = Route(
           encode = _.text,
           decode = arg => TextPage(text = arg),
           pattern = root / "app" / "test" / segment[String] / endOfSegments,
           basePath = basePath
         )
 
-        val noteRoute: Route[NotePage, (Int, Int)] = Route(
+        val noteRoute: Route.Total[NotePage, (Int, Int)] = Route(
           encode = page => (page.libraryId, page.noteId),
           decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
           pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments,
           basePath = basePath
         )
 
-        val searchRoute: Route[SearchPage, String] = Route.onlyQuery(
+        val searchRoute: Route.Total[SearchPage, String] = Route.onlyQuery(
           encode = page => page.query,
           decode = arg => SearchPage(arg),
           pattern = (root / "search" / endOfSegments) ? param[String]("query"),
           basePath = basePath
         )
 
-        val bigLegalRoute: Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
+        val bigLegalRoute: Route.Total[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
           encode = page => FragmentPatternArgs(path = page.page, (), fragment = page.section),
           decode = args => BigLegalPage(page = args.path, section = args.fragment),
           pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String],
@@ -137,6 +143,7 @@ class BasePathSpec extends UnitSpec {
             textRoute,
             noteRoute,
             homeRoute,
+            homeRouteTotal,
             searchRoute,
             bigLegalRoute,
             bigNumRoute,
@@ -156,13 +163,18 @@ class BasePathSpec extends UnitSpec {
         )
 
         it("segment routes - parse urls - match") {
-          if (basePath.nonEmpty) {
-            expectPageRelative(homeRoute, origin, s"$basePath", Some(HomePage))
-          } else {
-            // (basePath + url) must be a relative URL, so if basePath is empty, url can't also be empty, it must start with `/`
-            expectPageRelativeFailure(homeRoute, origin, s"$basePath")
+          def testHomeRoute(homeRoute: Route[HomePage.type, Unit]) = {
+            if (basePath.nonEmpty) {
+              expectPageRelative(homeRoute, origin, s"$basePath", Some(HomePage))
+            } else {
+              // (basePath + url) must be a relative URL, so if basePath is empty, url can't also be empty, it must start with `/`
+              expectPageRelativeFailure(homeRoute, origin, s"$basePath")
+            }
+            expectPageRelative(homeRoute, origin, s"$basePath/", Some(HomePage))
           }
-          expectPageRelative(homeRoute, origin, s"$basePath/", Some(HomePage))
+
+          testHomeRoute(homeRoute)
+          testHomeRoute(homeRouteTotal)
 
           expectPageRelative(libraryRoute, origin, s"$basePath/app/library/1234", Some(LibraryPage(libraryId = 1234)))
           expectPageRelative(libraryRoute, origin, s"$basePath/app/library/100?hello=world", Some(LibraryPage(libraryId = 100)))
@@ -190,12 +202,14 @@ class BasePathSpec extends UnitSpec {
 
           expectPageRelative(libraryRoute, origin, "/app/library/1234", if (basePath.isEmpty) Some(LibraryPage(1234)) else None)
 
-          {
+          def testHomeRoute(homeRoute: Route[HomePage.type, Unit]) = {
             if (Utils.basePathHasEmptyFragment(basePath)) {
               val basePathWithoutFragment = Utils.basePathWithoutFragment(basePath)
               expectPageRelative(homeRoute, origin, s"$basePathWithoutFragment", Some(HomePage))
             }
           }
+          testHomeRoute(homeRoute)
+          testHomeRoute(homeRouteTotal)
 
           // @TODO[API] I mean... these are not absolute urls...
           expectPageAbsoluteFailure(libraryRoute, origin, "//app/library/1234")
@@ -259,6 +273,28 @@ class BasePathSpec extends UnitSpec {
           urlForPage(DocsPage(NumPage(-123))) shouldBe Some(s"$basePath/docs/num/-123")
           urlForPage(DocsPage(NumPage(0))) shouldBe Some(s"$basePath/docs/zero/0")
           urlForPage(DocsPage(NumPage(50))) shouldBe None
+        }
+      
+        it("should not compile with non-singleton type for a staticTotal route") {
+          assertTypeError(
+            """|Route.staticTotal(
+               |  LegalPage("tos"),
+               |  pattern = root / endOfSegments,
+               |  basePath = "basePath"
+               |)
+               |""".stripMargin
+          )
+        }
+      
+        it("should not compile with non-singleton type ascription for a staticTotal route") {
+          assertTypeError(
+            """|Route.staticTotal[AppPage](
+               |  HomePage,
+               |  pattern = root / endOfSegments,
+               |  basePath = "basePath"
+               |)
+               |""".stripMargin
+          )
         }
       }
     }
