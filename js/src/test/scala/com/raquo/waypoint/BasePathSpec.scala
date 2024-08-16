@@ -274,6 +274,28 @@ class BasePathSpec extends UnitSpec {
           urlForPage(DocsPage(NumPage(0))) shouldBe Some(s"$basePath/docs/zero/0")
           urlForPage(DocsPage(NumPage(50))) shouldBe None
         }
+      
+        it("should not compile with non-singleton type for a staticTotal route") {
+          assertTypeError(
+            """|Route.staticTotal(
+               |  LegalPage("tos"),
+               |  pattern = root / endOfSegments,
+               |  basePath = "basePath"
+               |)
+               |""".stripMargin
+          )
+        }
+      
+        it("should not compile with non-singleton type ascription for a staticTotal route") {
+          assertTypeError(
+            """|Route.staticTotal[AppPage](
+               |  HomePage,
+               |  pattern = root / endOfSegments,
+               |  basePath = "basePath"
+               |)
+               |""".stripMargin
+          )
+        }
       }
     }
   }
