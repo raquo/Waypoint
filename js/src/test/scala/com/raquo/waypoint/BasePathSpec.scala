@@ -39,41 +39,41 @@ class BasePathSpec extends UnitSpec {
           basePath = basePath
         )
 
-        val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.staticTotal(
+        val homeRouteTotal: Route[HomePage.type, Unit] = Route.staticTotal(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
         )
 
-        val libraryRoute: Route.Total[LibraryPage, Int] = Route(
+        val libraryRoute: Route[LibraryPage, Int] = Route(
           encode = _.libraryId,
           decode = arg => LibraryPage(libraryId = arg),
           pattern = root / "app" / "library" / segment[Int] / endOfSegments,
           basePath = basePath
         )
 
-        val textRoute: Route.Total[TextPage, String] = Route(
+        val textRoute: Route[TextPage, String] = Route(
           encode = _.text,
           decode = arg => TextPage(text = arg),
           pattern = root / "app" / "test" / segment[String] / endOfSegments,
           basePath = basePath
         )
 
-        val noteRoute: Route.Total[NotePage, (Int, Int)] = Route(
+        val noteRoute: Route[NotePage, (Int, Int)] = Route(
           encode = page => (page.libraryId, page.noteId),
           decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
           pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments,
           basePath = basePath
         )
 
-        val searchRoute: Route.Total[SearchPage, String] = Route.onlyQuery(
+        val searchRoute: Route[SearchPage, String] = Route.onlyQuery(
           encode = page => page.query,
           decode = arg => SearchPage(arg),
           pattern = (root / "search" / endOfSegments) ? param[String]("query"),
           basePath = basePath
         )
 
-        val bigLegalRoute: Route.Total[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
+        val bigLegalRoute: Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
           encode = page => FragmentPatternArgs(path = page.page, (), fragment = page.section),
           decode = args => BigLegalPage(page = args.path, section = args.fragment),
           pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String],
@@ -274,7 +274,7 @@ class BasePathSpec extends UnitSpec {
           urlForPage(DocsPage(NumPage(0))) shouldBe Some(s"$basePath/docs/zero/0")
           urlForPage(DocsPage(NumPage(50))) shouldBe None
         }
-      
+
         it("should not compile with non-singleton type for a staticTotal route") {
           assertTypeError(
             """|Route.staticTotal(
@@ -285,7 +285,7 @@ class BasePathSpec extends UnitSpec {
                |""".stripMargin
           )
         }
-      
+
         it("should not compile with non-singleton type ascription for a staticTotal route") {
           assertTypeError(
             """|Route.staticTotal[AppPage](

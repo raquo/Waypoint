@@ -27,11 +27,11 @@ sealed abstract class Route[Page, Args] private[waypoint](
   }
 
   /** @return None if the [[Route]] is partial and the given object does not match. */
-  def argsFromPage(page: Page): Option[Args] = encode(page)
+  def argsFromPage(page: Page): Option[Args] = encodeOpt(page)
 
   /** @return None if the [[Route]] is partial and the given object does not match. */
   def relativeUrlForPage[P >: Page](page: P): Option[String] =
-    encode(page).map(relativeUrlForArgs)
+    encodeOpt(page).map(relativeUrlForArgs)
 
   def relativeUrlForArgs(args: Args): String =
     basePath + createRelativeUrl(args)
@@ -47,7 +47,7 @@ sealed abstract class Route[Page, Args] private[waypoint](
     val originMatches = Utils.absoluteUrlMatchesOrigin(origin, url)
     val urlToMatch = if (originMatches) url.substring(origin.length) else url
     // @TODO[API] We evaluate the page unconditionally, as that will consistently throw in case of malformed URL
-    val maybePage = matchRelativeUrl(urlToMatch).flatMap(decode) // This just ignores the origin present in the url
+    val maybePage = matchRelativeUrl(urlToMatch).flatMap(decodeOpt) // This just ignores the origin present in the url
     if (originMatches) {
       maybePage
     } else {
@@ -68,21 +68,21 @@ sealed abstract class Route[Page, Args] private[waypoint](
     }
     if (url.startsWith(basePath)) {
       val urlWithoutBasePath = url.substring(basePath.length)
-      matchRelativeUrl(origin + urlWithoutBasePath).flatMap(decode)
+      matchRelativeUrl(origin + urlWithoutBasePath).flatMap(decodeOpt)
     } else if (Utils.basePathHasEmptyFragment(basePath) && url == Utils.basePathWithoutFragment(basePath)) {
-      matchRelativeUrl(origin).flatMap(decode)
+      matchRelativeUrl(origin).flatMap(decodeOpt)
     } else {
       None
     }
   }
 
-  private def encode(page: Any): Option[Args] = {
+  private def encodeOpt(page: Any): Option[Args] = {
     matchEncodePF
       .andThen(Some(_))
       .applyOrElse(page, (_: Any) => None)
   }
 
-  private def decode(args: Args): Option[Page] = {
+  private def decodeOpt(args: Args): Option[Page] = {
     decodePF
       .andThen[Option[Page]](Some(_))
       .applyOrElse(args, (_: Args) => None)
@@ -119,7 +119,7 @@ object Route {
    */
   class Total[Page, Args] private[waypoint](
     encode: Page => Args,
-    decode: Args => Page,
+    decode: Args => Page, // #TODO[unused] Should we remove it? Or expose it?
     matchEncodePF: PartialFunction[Any, Args],
     decodePF: PartialFunction[Args, Page],
     createRelativeUrl: Args => String,
@@ -135,16 +135,15 @@ object Route {
       relativeUrlForArgs(encode(page))
   }
   object Total {
-    private[waypoint] def apply[Page, Args](
+    private[waypoint] def apply[Page: ClassTag, Args](
       encode: Page => Args,
       decode: Args => Page,
       createRelativeUrl: Args => String,
       matchRelativeUrl: String => Option[Args],
-      basePath: String,
-      klass: Class[Page]
+      basePath: String
     ): Total[Page, Args] = new Total(
       encode, decode,
-      matchEncodePF = { case p if klass.isInstance(p) => encode(klass.cast(p)) },
+      matchEncodePF = { case p: Page => encode(p) },
       decodePF = { case args => decode(args) },
       createRelativeUrl = createRelativeUrl,
       matchRelativeUrl = matchRelativeUrl,
@@ -169,8 +168,7 @@ object Route {
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createPath(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -210,8 +208,7 @@ object Route {
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -250,8 +247,7 @@ object Route {
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -290,8 +286,7 @@ object Route {
       encode, decode,
       createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -333,8 +328,7 @@ object Route {
         "/" + pattern.createPart(patternArgs)
       },
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -379,8 +373,7 @@ object Route {
         "/" + pattern.createPart(patternArgs)
       },
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -425,8 +418,7 @@ object Route {
         "/" + pattern.createPart(patternArgs)
       },
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath,
-      klass = classFromClassTag
+      basePath = basePath
     )
   }
 
@@ -478,24 +470,21 @@ object Route {
   /** Create a route for a static page that does not encode any data in the URL.
     *
     * This only allows using singleton types, like `object Foo`.
-    * 
-    * @see [[ValueOf]]
+    *
+    * @see [[ValueOf]] - evidence that `Page` is a singleton type
     * */
-  def staticTotal[Page](
+  def staticTotal[Page: ValueOf: ClassTag](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
     basePath: String = ""
-  )(implicit valueOf: ValueOf[Page]): Total[Page, Unit] = {
+  ): Total[Page, Unit] = {
     Total[Page, Unit](
       encode = _ => (),
       decode = _ => staticPage,
       createRelativeUrl = args => "/" + pattern.createPath(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath,
-      klass = staticPage.getClass.asInstanceOf[Class[Page]]
+      basePath = basePath
     )
   }
 
-  private def classFromClassTag[A](implicit ct: ClassTag[A]): Class[A] =
-    ct.runtimeClass.asInstanceOf[Class[A]]
 }
