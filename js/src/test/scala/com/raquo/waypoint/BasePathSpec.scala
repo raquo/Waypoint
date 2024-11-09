@@ -33,19 +33,23 @@ class BasePathSpec extends UnitSpec {
 
       describe(s"basePath = `$basePath`") {
 
-        val homeRoute: Route.Partial[HomePage.type, Unit] = Route.static(
+        // #TODO[Test] homeRoute and homeRouteTotal should not be in the same test,
+        //  they are overlapping – that is not a real life condition.
+        //  - Add a bool parameter to `runTest` that would add one or the other to routes?
+
+        val homeRoute: Route[HomePage.type, Unit] = Route.static(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
         )
 
-        val homeRouteTotal: Route[HomePage.type, Unit] = Route.staticTotal(
+        val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.staticTotal(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
         )
 
-        val libraryRoute: Route[LibraryPage, Int] = Route(
+        val libraryRoute: Route.Total[LibraryPage, Int] = Route(
           encode = _.libraryId,
           decode = arg => LibraryPage(libraryId = arg),
           pattern = root / "app" / "library" / segment[Int] / endOfSegments,
@@ -277,6 +281,11 @@ class BasePathSpec extends UnitSpec {
           urlForPage(DocsPage(NumPage(-123))) shouldBe Some(s"$basePath/docs/num/-123")
           urlForPage(DocsPage(NumPage(0))) shouldBe Some(s"$basePath/docs/zero/0")
           urlForPage(DocsPage(NumPage(50))) shouldBe None
+        }
+
+        it("total routes - total APIs") {
+          homeRouteTotal.relativeUrlForPage(HomePage) shouldBe basePath + "/"
+          libraryRoute.argsFromPageTotal(LibraryPage(123)) shouldBe 123
         }
 
         it("should not compile with non-singleton type for a staticTotal route") {

@@ -451,8 +451,11 @@ object Route {
 
   /** Create a route for a static page that does not encode any data in the URL.
     *
-    * Take note that this returns a [[Partial]] route and you might want to use [[staticTotal]] instead.
-    * */
+    * This returns a [[Partial]] route. If you want a [[Total]] route,
+    * use [[staticTotal]] instead. They behave the same, but the total version
+    * offers a couple extra methods, but it requires that the `staticPage` is
+    * a singleton (e.g. `object HomePage`).
+    */
   def static[Page](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
@@ -469,10 +472,11 @@ object Route {
 
   /** Create a route for a static page that does not encode any data in the URL.
     *
-    * This only allows using singleton types, like `object Foo`.
+    * This version only allows using singleton types, like `object Foo`.
+    * See [[static]] for a more relaxed version.
     *
     * @see [[ValueOf]] - evidence that `Page` is a singleton type
-    * */
+    */
   def staticTotal[Page: ValueOf: ClassTag](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
