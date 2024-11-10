@@ -15,16 +15,19 @@ import scala.reflect.ClassTag
   *                        Note: the Route might match only a subset of args of this type.
   */
 sealed abstract class Route[Page, Args] private[waypoint](
-  matchEncodePF: PartialFunction[Any, Args],
-  decodePF: PartialFunction[Args, Page],
-  createRelativeUrl: Args => String,
-  matchRelativeUrl: String => Option[Args],
   basePath: String
 ) {
-
   if (basePath.nonEmpty && !basePath.startsWith("/")) {
     throw new Exception(s"Route's basePath, when not empty, must start with `/`. basePath is `$basePath` for this route.")
   }
+
+  protected val matchEncodePF: PartialFunction[Any, Args]
+
+  protected val decodePF: PartialFunction[Args, Page]
+
+  protected val createRelativeUrl: Args => String
+
+  protected val matchRelativeUrl: String => Option[Args]
 
   /** @return None if the [[Route]] is partial and the given object does not match. */
   def argsFromPage(page: Page): Option[Args] = encodeOpt(page)
@@ -104,51 +107,36 @@ object Route {
    *                        Note: the Route might match only a subset of args of this type.
    */
   class Partial[Page, Args] private[waypoint](
-    matchEncodePF: PartialFunction[Any, Args],
-    decodePF: PartialFunction[Args, Page],
-    createRelativeUrl: Args => String,
-    matchRelativeUrl: String => Option[Args],
+    override protected val matchEncodePF: PartialFunction[Any, Args],
+    override protected val decodePF: PartialFunction[Args, Page],
+    override protected val createRelativeUrl: Args => String,
+    override protected val matchRelativeUrl: String => Option[Args],
     basePath: String
   ) extends Route[Page, Args](
-    matchEncodePF = matchEncodePF, decodePF = decodePF, createRelativeUrl = createRelativeUrl,
-    matchRelativeUrl = matchRelativeUrl, basePath = basePath
+    basePath = basePath
   )
 
   /**
    * A total route is a route that can always translate a [[Page]] into a [[Args]] and vice versa.
    */
-  class Total[Page, Args] private[waypoint](
+  class Total[Page: ClassTag, Args] private[waypoint](
     encode: Page => Args,
-    decode: Args => Page, // #TODO[unused] Should we remove it? Or expose it?
-    matchEncodePF: PartialFunction[Any, Args],
-    decodePF: PartialFunction[Args, Page],
-    createRelativeUrl: Args => String,
-    matchRelativeUrl: String => Option[Args],
+    decode: Args => Page,
+    override protected val createRelativeUrl: Args => String,
+    override protected val matchRelativeUrl: String => Option[Args],
     basePath: String
   ) extends Route[Page, Args](
-    matchEncodePF, decodePF, createRelativeUrl, matchRelativeUrl, basePath
+    basePath = basePath
   ) {
+    override protected val matchEncodePF: PartialFunction[Any, Args] = { case p: Page => encode(p) }
+
+    override protected val decodePF: PartialFunction[Args, Page] = { case args => decode(args) }
+
     def argsFromPageTotal(page: Page): Args =
       encode(page)
 
     def relativeUrlForPage(page: Page): String =
       relativeUrlForArgs(encode(page))
-  }
-  object Total {
-    private[waypoint] def apply[Page: ClassTag, Args](
-      encode: Page => Args,
-      decode: Args => Page,
-      createRelativeUrl: Args => String,
-      matchRelativeUrl: String => Option[Args],
-      basePath: String
-    ): Total[Page, Args] = new Total(
-      encode, decode,
-      matchEncodePF = { case p: Page => encode(p) },
-      decodePF = { case args => decode(args) },
-      createRelativeUrl = createRelativeUrl,
-      matchRelativeUrl = matchRelativeUrl,
-      basePath = basePath
-    )
   }
 
   // @TODO[URL-DSL] We need better abstractions, like Args[P, Q, F] and UrlPart[P, Q, F].
@@ -164,7 +152,7 @@ object Route {
     pattern: PathSegment[Args, DummyError],
     basePath: String = ""
   ): Total[Page, Args] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createPath(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
@@ -204,7 +192,7 @@ object Route {
     pattern: PathSegmentWithQueryParams[Unit, DummyError, QueryArgs, DummyError],
     basePath: String = ""
   ): Total[Page, QueryArgs] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
@@ -243,7 +231,7 @@ object Route {
     pattern: PathSegmentWithQueryParams[PathArgs, DummyError, QueryArgs, DummyError],
     basePath: String = ""
   ): Total[Page, PatternArgs[PathArgs, QueryArgs]] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
@@ -282,7 +270,7 @@ object Route {
     pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentArgs] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
       matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
@@ -321,7 +309,7 @@ object Route {
     pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = { args =>
         val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
@@ -366,7 +354,7 @@ object Route {
     pattern: PathQueryFragmentRepr[Unit, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[Unit, QueryArgs, FragmentArgs]] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = { args =>
         val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
@@ -411,7 +399,7 @@ object Route {
     pattern: PathQueryFragmentRepr[PathArgs, DummyError, QueryArgs, DummyError, FragmentArgs, DummyError],
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[PathArgs, QueryArgs, FragmentArgs]] = {
-    Total(
+    new Total(
       encode, decode,
       createRelativeUrl = { args =>
         val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
@@ -482,7 +470,7 @@ object Route {
     pattern: PathSegment[Unit, DummyError],
     basePath: String = ""
   ): Total[Page, Unit] = {
-    Total[Page, Unit](
+    new Total[Page, Unit](
       encode = _ => (),
       decode = _ => staticPage,
       createRelativeUrl = args => "/" + pattern.createPath(args),
