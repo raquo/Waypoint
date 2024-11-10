@@ -47,7 +47,7 @@ case class SplitRender[Page, View](
   /** Signal of output elements. Put this in your DOM with:
     * `child <-- SplitRender(page).collect(...).collectSignal(...).signal`
     */
-  def signal: Signal[View] = {
+  lazy val signal: Signal[View] = {
     var maybeCurrentRenderer: Option[Renderer[Page, View]] = None
 
     pageSignal.map { nextPage =>
