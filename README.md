@@ -115,7 +115,7 @@ val app: Div = div(
 )
 ``` 
 
-This is essentially a specialized version of the Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/docs/Documentation.md#performant-children-rendering--split). The big idea is the same: provide a helper that lets you provide an efficient `Signal[A] => HtmlElement` instead of the inefficient `Signal[A] => Signal[HtmlElement]`. The difference is that the split operator groups together models by key, **which is a value**, whereas SplitRender groups together models by **subtype** and refines them to a subtype much like a `currentPageSignal.collect { case p: UserPage => p }` would if `collect` method existed on Signals.
+This is essentially a specialized version of the Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/website/docs/documentation.md#performant-children-rendering--split). The big idea is the same: provide a helper that lets you provide an efficient `Signal[A] => HtmlElement` instead of the inefficient `Signal[A] => Signal[HtmlElement]`. The difference is that the split operator groups together models by key, **which is a value**, whereas SplitRender groups together models by **subtype** and refines them to a subtype much like a `currentPageSignal.collect { case p: UserPage => p }` would if `collect` method existed on Signals.
 
 You should read the linked `split` docs to understand the general splitting pattern, as I will only cover this specialized case very lightly.
 
