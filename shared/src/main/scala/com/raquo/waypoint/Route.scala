@@ -439,33 +439,12 @@ object Route {
 
   /** Create a route for a static page that does not encode any data in the URL.
     *
-    * This returns a [[Partial]] route. If you want a [[Total]] route,
-    * use [[staticTotal]] instead. They behave the same, but the total version
-    * offers a couple extra methods, but it requires that the `staticPage` is
-    * a singleton (e.g. `object HomePage`).
-    */
-  def static[Page](
-    staticPage: Page,
-    pattern: PathSegment[Unit, DummyError],
-    basePath: String = ""
-  ): Partial[Page, Unit] = {
-    new Partial[Page, Unit](
-      matchEncodePF = { case p if p == staticPage => () },
-      decodePF = { case _ => staticPage },
-      createRelativeUrl = args => "/" + pattern.createPath(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
-      basePath = basePath
-    )
-  }
-
-  /** Create a route for a static page that does not encode any data in the URL.
-    *
     * This version only allows using singleton types, like `object Foo`.
-    * See [[static]] for a more relaxed version.
+    * See [[staticPartial]] for a more relaxed version.
     *
     * @see [[ValueOf]] - evidence that `Page` is a singleton type
     */
-  def staticTotal[Page: ValueOf: ClassTag](
+  def static[Page: ValueOf: ClassTag](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
     basePath: String = ""
@@ -479,4 +458,24 @@ object Route {
     )
   }
 
+  /** Create a route for a static page that does not encode any data in the URL.
+    *
+    * This returns a [[Partial]] route. If you want a [[Total]] route,
+    * use [[static]] instead. They behave the same, but the total version
+    * offers a couple extra methods, but it requires that the `staticPage` is
+    * a singleton (e.g. `object HomePage`).
+    */
+  def staticPartial[Page](
+    staticPage: Page,
+    pattern: PathSegment[Unit, DummyError],
+    basePath: String = ""
+  ): Partial[Page, Unit] = {
+    new Partial[Page, Unit](
+      matchEncodePF = { case p if p == staticPage => () },
+      decodePF = { case _ => staticPage },
+      createRelativeUrl = args => "/" + pattern.createPath(args),
+      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      basePath = basePath
+    )
+  }
 }

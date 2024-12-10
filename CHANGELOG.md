@@ -9,10 +9,13 @@ _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / 
 * **Build: Waypoint depends on Laminar now (not just Airstream)**
   * New: `navigateTo` example method from the docs is now available on `Router`
     * Unlike the example, it does not reset scroll position – do that yourself by observing to `currentPageSignal`
-  * _Migration: `Router` constructor is now a single argument list, `popStateEvents` and `owner` now have default values._
+  * _**Migration:** `Router` constructor is now a single argument list, `popStateEvents` and `owner` now have default values._
 * **New: Total and Partial route types, to improve type-safety for the total routes.**
+  * New: `route.argsFromPageTotal` and `route.relativeUrlForPage` available on `Route.Total` subtype of `Route`. 
+  * _**Migration:** If `Route.static` complains that it can't find `ValueOf` for your page type, it's because your type is not a singleton like `object LoginPage`, so we can't make a total route for it. Use `Route.staticPartial` instead._  
 * New: `Router.replacePageTitle`
 * Fix: `SplitRender.signal` should be a lazy val, not def.
+* Build: scalamft config
 
 #### v8.0.1 – Aug 2024
 * Build: Update URL DSL to 0.6.2

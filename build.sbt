@@ -5,7 +5,7 @@ import VersionHelper.{versionFmt, fallbackVersion}
 // Get Maven releases faster
 resolvers ++= Resolver.sonatypeOssRepos("public")
 
-lazy val preload = taskKey[Unit]("runs Laminar-specific pre-load tasks")
+lazy val preload = taskKey[Unit]("runs Waypoint-specific pre-load tasks")
 
 preload := {
   val projectDir = (ThisBuild / baseDirectory).value

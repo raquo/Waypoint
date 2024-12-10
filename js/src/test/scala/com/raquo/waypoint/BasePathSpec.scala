@@ -37,13 +37,13 @@ class BasePathSpec extends UnitSpec {
         //  they are overlapping – that is not a real life condition.
         //  - Add a bool parameter to `runTest` that would add one or the other to routes?
 
-        val homeRoute: Route[HomePage.type, Unit] = Route.static(
+        val homeRoute: Route[HomePage.type, Unit] = Route.staticPartial(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
         )
 
-        val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.staticTotal(
+        val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.static(
           HomePage,
           pattern = root / endOfSegments,
           basePath = basePath
