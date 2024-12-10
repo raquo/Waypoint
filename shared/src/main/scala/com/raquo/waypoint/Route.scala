@@ -14,7 +14,7 @@ import scala.reflect.ClassTag
   * @tparam Args         - Type of data saved in the URL for pages matched by this route
   *                        Note: the Route might match only a subset of args of this type.
   */
-sealed abstract class Route[Page, Args] private[waypoint](
+sealed abstract class Route[Page, Args] private[waypoint] (
   basePath: String
 ) {
   if (basePath.nonEmpty && !basePath.startsWith("/")) {
@@ -106,7 +106,7 @@ object Route {
    * @tparam Args         - Type of data saved in the URL for pages matched by this route
    *                        Note: the Route might match only a subset of args of this type.
    */
-  class Partial[Page, Args] private[waypoint](
+  class Partial[Page, Args] private[waypoint] (
     override protected val matchEncodePF: PartialFunction[Any, Args],
     override protected val decodePF: PartialFunction[Args, Page],
     override protected val createRelativeUrl: Args => String,
@@ -119,7 +119,7 @@ object Route {
   /**
    * A total route is a route that can always translate a [[Page]] into a [[Args]] and vice versa.
    */
-  class Total[Page: ClassTag, Args] private[waypoint](
+  class Total[Page: ClassTag, Args] private[waypoint] (
     encode: Page => Args,
     decode: Args => Page,
     override protected val createRelativeUrl: Args => String,

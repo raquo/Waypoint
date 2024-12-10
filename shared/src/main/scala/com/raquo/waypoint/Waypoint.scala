@@ -8,5 +8,5 @@ class Waypoint[PathErr, QueryErr, FragErr](
   override protected val queryError: ParamMatchingError[QueryErr],
   override protected val fragmentError: FragmentMatchingError[FragErr],
 ) extends PathSegmentImpl[PathErr]
-  with QueryParametersImpl[QueryErr]
-  with FragmentImpl[FragErr]
+with QueryParametersImpl[QueryErr]
+with FragmentImpl[FragErr]

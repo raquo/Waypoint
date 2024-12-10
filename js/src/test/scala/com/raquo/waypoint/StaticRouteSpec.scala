@@ -2,10 +2,11 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage._
 import org.scalatest.Assertion
 import upickle.default._
+
 import scala.util.{Success, Try}
 
 class StaticRouteSpec extends JsUnitSpec {

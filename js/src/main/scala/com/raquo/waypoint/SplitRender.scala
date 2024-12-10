@@ -3,6 +3,7 @@ package com.raquo.waypoint
 // #TODO Test all this
 
 import com.raquo.airstream.core.Signal
+
 import scala.reflect.ClassTag
 
 case class SplitRender[Page, View](
@@ -11,7 +12,7 @@ case class SplitRender[Page, View](
 ) {
 
   /** Add a standard renderer for Page type */
-  def collect[P <: Page : ClassTag](render: P => View): SplitRender[Page, View] = {
+  def collect[P <: Page: ClassTag](render: P => View): SplitRender[Page, View] = {
     val renderer = new CollectPageRenderer[Page, View]({ case p: P => render(p) })
     copy(renderers = renderers :+ renderer)
   }
@@ -35,7 +36,7 @@ case class SplitRender[Page, View](
   /** This renderer is efficient. It creates only a single element (instance of Out)
     * that takes Signal[P] as a parameter instead of creating a Signal of elements.
     */
-  def collectSignal[P <: Page : ClassTag](render: Signal[P] => View): SplitRender[Page, View] = {
+  def collectSignal[P <: Page: ClassTag](render: Signal[P] => View): SplitRender[Page, View] = {
     collectSignalPF({ case p: P => p })(render)
   }
 

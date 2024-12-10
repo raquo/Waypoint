@@ -50,26 +50,22 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
   ): Route[Bundle, PatternArgs[Unit, CtxArgs]] = Route.withQueryPF(
-
     decode = { case bundleArgs =>
       bundleFromPageWithContext(staticPage, decodeContext(bundleArgs.params))
     },
-
     matchEncode = {
       case bundle: Bundle if pageFromBundle(bundle) == staticPage =>
         PatternArgs((), encodeContext(contextFromBundle(bundle)))
     },
-
     pattern = pattern ? contextPattern
   )
 
   /** Create a context route for pages that are encoded in path segments only */
-  def apply[P <: Page : ClassTag, PageArgs](
+  def apply[P <: Page: ClassTag, PageArgs](
     encode: P => PageArgs,
     decode: PageArgs => P,
     pattern: PathSegment[PageArgs, DummyError]
   ): Route[Bundle, PatternArgs[PageArgs, CtxArgs]] = Route.withQueryPF(
-
     matchEncode = {
       val matchBundle: PartialFunction[Any, (Page, Ctx)] = {
         case bundle: Bundle => (pageFromBundle(bundle), contextFromBundle(bundle))
@@ -82,23 +78,20 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
       }
       Utils.andThenPF(matchBundle, matchPageEncodeBundle)
     },
-
     decode = { case bundleArgs =>
       val page = decode(bundleArgs.path)
       val context = decodeContext(bundleArgs.params)
       bundleFromPageWithContext(page, context)
     },
-
     pattern = pattern ? contextPattern
   )
 
   /** Create a context route for pages that are encoded in query params only */
-  def onlyQuery[P <: Page : ClassTag, PageArgs](
+  def onlyQuery[P <: Page: ClassTag, PageArgs](
     encode: P => PageArgs,
     decode: PageArgs => P,
     pattern: PathSegmentWithQueryParams[Unit, DummyError, PageArgs, DummyError],
   ): Route[Bundle, (PageArgs, CtxArgs)] = Route.onlyQueryPF(
-
     matchEncode = {
       val matchBundle: PartialFunction[Any, (Page, Ctx)] = {
         case bundle: Bundle => (pageFromBundle(bundle), contextFromBundle(bundle))
@@ -111,24 +104,21 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
       }
       Utils.andThenPF(matchBundle, matchPageEncodeBundle)
     },
-
     decode = {
       case (pageArgs, ctxArgs) =>
         val page = decode(pageArgs)
         val ctx = decodeContext(ctxArgs)
         bundleFromPageWithContext(page, ctx)
     },
-
     pattern = pattern & contextPattern
   )
 
   /** Create a context route for page that are encoded in both path segments in query params */
-  def withQuery[P <: Page : ClassTag, PathArgs, QueryArgs](
+  def withQuery[P <: Page: ClassTag, PathArgs, QueryArgs](
     encode: P => PatternArgs[PathArgs, QueryArgs],
     decode: PatternArgs[PathArgs, QueryArgs] => P,
     pattern: PathSegmentWithQueryParams[PathArgs, DummyError, QueryArgs, DummyError]
   ): Route[Bundle, PatternArgs[PathArgs, (QueryArgs, CtxArgs)]] = Route.withQueryPF(
-
     matchEncode = {
       val matchBundle: PartialFunction[Any, (Page, Ctx)] = {
         case bundle: Bundle => (pageFromBundle(bundle), contextFromBundle(bundle))
@@ -144,7 +134,6 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
       }
       Utils.andThenPF(matchBundle, matchPageEncodePage)
     },
-
     decode = { case bundleArgs =>
       val pagePathArgs = bundleArgs.path
       val (pageQueryArgs, contextArgs) = bundleArgs.params
@@ -152,7 +141,6 @@ class ContextRouteBuilder[Bundle: ClassTag, Page, Ctx: ClassTag, CtxArgs](
       val context = decodeContext(contextArgs)
       bundleFromPageWithContext(page, context)
     },
-
     pattern = pattern & contextPattern
   )
 }

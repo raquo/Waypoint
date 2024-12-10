@@ -8,7 +8,7 @@ import com.raquo.airstream.state.Var
   *
   * It is sort of like a specialized version of Airstream .split
   */
-sealed class CollectPageSignalRenderer[InPage, OutPage, +View] private[waypoint](
+sealed class CollectPageSignalRenderer[InPage, OutPage, +View] private[waypoint] (
   collectPage: PartialFunction[InPage, OutPage],
   render: Signal[OutPage] => View
 ) extends Renderer[InPage, View] {

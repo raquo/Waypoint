@@ -2,9 +2,9 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.AppPage.DocsSection._
-import com.raquo.waypoint.fixtures.AppPage.{LibraryPage, _}
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage.{LibraryPage, _}
+import com.raquo.waypoint.fixtures.AppPage.DocsSection._
 import upickle.default._
 
 import scala.util.Try
@@ -227,10 +227,10 @@ class BasePathSpec extends UnitSpec {
           expectPageRelative(textRoute, origin, s"$basePath/app/test/abc%3F%2F%3D%2B%3C%3E%20%D0%B9%D0%BE%D0%BB%D0%BE", Some(TextPage("abc?/=+<> йоло")))
 
           // Browser will always give us properly encoded URL. Same goes for router.urlForPage. We don't expect an invalid URL.
-          //val thrown = intercept[URISyntaxException] {
+          // val thrown = intercept[URISyntaxException] {
           //  testRoute.pageForUrl("/app/test/abc?/=+<> йоло")
-          //}
-          //assert(thrown.getMessage === "Malformed URI in app/test/abc?/=+<> йоло at -1")
+          // }
+          // assert(thrown.getMessage === "Malformed URI in app/test/abc?/=+<> йоло at -1")
           // @TODO[API] ^^^ Figure out how we want this to behave and why. I think it's not throwing right now, just failing to match
         }
 

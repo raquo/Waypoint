@@ -2,9 +2,9 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.AppPage.DocsSection._
-import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage._
+import com.raquo.waypoint.fixtures.AppPage.DocsSection._
 import upickle.default._
 
 import scala.util.Try
@@ -119,7 +119,7 @@ class DynamicRouteSpec extends UnitSpec {
     initialUrl = origin + "/app/library/700"
   )
 
-  it ("segment routes - parse urls - match") {
+  it("segment routes - parse urls - match") {
     expectPageRelative(libraryRoute, origin, "/app/library/1234", Some(LibraryPage(libraryId = 1234)))
     expectPageRelative(libraryRoute, origin, "/app/library/1234/", Some(LibraryPage(libraryId = 1234))) // We allow trailing slashes
     expectPageRelative(libraryRoute, origin, "/app/library/-100500", Some(LibraryPage(libraryId = -100500)))
@@ -143,7 +143,7 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(componentRoute, origin, "/docs/component/kot?group=ala", Some(DocsPage(ComponentPage(name = "kot", group = "ala"))))
   }
 
-  it ("segment routes - parse urls - no match") {
+  it("segment routes - parse urls - no match") {
 
     expectPageRelative(libraryRoute, origin, "/app/library/1234h", None)
     expectPageRelative(libraryRoute, origin, "/app/library/124.00", None)
@@ -154,13 +154,13 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(libraryRoute, origin, "/app/library/1234/blah?", None)
 
     // @TODO[API] This should fail, but doesn't
-    //expectPageRelative(libraryRoute, origin, "/app/library/1234//", None)
+    // expectPageRelative(libraryRoute, origin, "/app/library/1234//", None)
 
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/4567/yolo", None)
     expectPageRelative(noteRoute, origin, "/app/library/1234/note/hey", None)
   }
 
-  it ("segment routes - parse urls - weird cases") {
+  it("segment routes - parse urls - weird cases") {
     expectPageRelativeFailure(libraryRoute, origin, "app/library/1234")
     expectPageRelativeFailure(libraryRoute, origin, "//app/library/1234")
     expectPageRelativeFailure(libraryRoute, origin, "//evil.com/app/library/1234")
@@ -176,14 +176,14 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(textRoute, origin, "/app/test/abc%3F%2F%3D%2B%3C%3E%20%D0%B9%D0%BE%D0%BB%D0%BE", Some(TextPage("abc?/=+<> йоло")))
 
     // Browser will always give us properly encoded URL. Same goes for router.urlForPage. We don't expect an invalid URL.
-    //val thrown = intercept[URISyntaxException] {
+    // val thrown = intercept[URISyntaxException] {
     //  testRoute.pageForUrl("/app/test/abc?/=+<> йоло")
-    //}
-    //assert(thrown.getMessage === "Malformed URI in app/test/abc?/=+<> йоло at -1")
+    // }
+    // assert(thrown.getMessage === "Malformed URI in app/test/abc?/=+<> йоло at -1")
     // @TODO[API] ^^^ Figure out how we want this to behave and why. I think it's not throwing right now, just failing to match
   }
 
-  it ("query routes - parse urls") {
+  it("query routes - parse urls") {
     expectPageRelative(searchRoute, origin, "/search?query=hello", Some(SearchPage("hello")))
     expectPageRelative(searchRoute, origin, "/search?query=hello&world=yes", Some(SearchPage("hello")))
     expectPageRelative(searchRoute, origin, "/search?world=yes&query=hello", Some(SearchPage("hello")))
@@ -196,7 +196,7 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(searchRoute, origin, "/othersearch?query=sugar", None)
   }
 
-  it ("combined routes - parse urls") {
+  it("combined routes - parse urls") {
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query=hello", Some(WorkspaceSearchPage("123", "hello")))
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?query=hello&world=yes", Some(WorkspaceSearchPage("123", "hello")))
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/123?world=yes&query=hello", Some(WorkspaceSearchPage("123", "hello")))
@@ -213,10 +213,10 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(workspaceSearchRoute, origin, "/workspace/?query=sugar", None)
   }
 
-  it ("fragment routes - parse urls") {
+  it("fragment routes - parse urls") {
     expectPageRelative(legalRoute, origin, "/legal#foreword", Some(LegalPage(section = "foreword")))
     expectPageRelative(legalRoute, origin, "/legal/#foreword", Some(LegalPage(section = "foreword")))
-    //expectPageRelative(legalRoute, origin, "/legal#fore%20word", Some(LegalPage(section = "fore word"))) // @TODO[URL-DSL]
+    // expectPageRelative(legalRoute, origin, "/legal#fore%20word", Some(LegalPage(section = "fore word"))) // @TODO[URL-DSL]
     expectPageRelative(legalRoute, origin, "/legal#fore word", Some(LegalPage(section = "fore word")))
     expectPageRelative(legalRoute, origin, "/legal#", None)
     expectPageRelative(legalRoute, origin, "/legal", None)
@@ -229,7 +229,7 @@ class DynamicRouteSpec extends UnitSpec {
     expectPageRelative(hugeLegalRoute, origin, "/legal/notices#", None)
   }
 
-  it ("segment routes - generate urls") {
+  it("segment routes - generate urls") {
 
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
@@ -239,7 +239,7 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(TextPage("abc?/=+<> йоло")) shouldBe Some("/app/test/abc%3F%2F%3D%2B%3C%3E%20%D0%B9%D0%BE%D0%BB%D0%BE")
   }
 
-  it ("query routes - generate urls") {
+  it("query routes - generate urls") {
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(SearchPage("hello")) shouldBe Some("/search?query=hello")
@@ -248,7 +248,7 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(SearchPage("")) shouldBe Some("/search?query=") // @TODO[API] We can't parse this URL tho
   }
 
-  it ("combined routes - generate urls") {
+  it("combined routes - generate urls") {
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(WorkspaceSearchPage("1234", "hello")) shouldBe Some("/workspace/1234?query=hello")
@@ -258,7 +258,7 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(WorkspaceSearchPage("", "hello")) shouldBe Some("/workspace?query=hello") // @TODO[API] This is not correct, we can't parse this back into the same page
   }
 
-  it ("fragment routes - generate urls") {
+  it("fragment routes - generate urls") {
 
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
@@ -270,7 +270,7 @@ class DynamicRouteSpec extends UnitSpec {
     urlForPage(HugeLegalPage(page = "privacy", version = 123, section = "thirdparty")) shouldBe Some("/legal/privacy?version=123#thirdparty")
   }
 
-  it ("partial routes - generate urls") {
+  it("partial routes - generate urls") {
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(DocsPage(NumPage(123))) shouldBe Some("/docs/num/123")

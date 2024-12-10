@@ -1,8 +1,29 @@
+import com.raquo.buildkit.SourceDownloader
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 import VersionHelper.{versionFmt, fallbackVersion}
 
 // Get Maven releases faster
 resolvers ++= Resolver.sonatypeOssRepos("public")
+
+lazy val preload = taskKey[Unit]("runs Laminar-specific pre-load tasks")
+
+preload := {
+  val projectDir = (ThisBuild / baseDirectory).value
+  // TODO Move code generators here as well?
+
+  SourceDownloader.downloadVersionedFile(
+    name = "scalafmt-shared-conf",
+    version = "v0.1.0",
+    urlPattern = version => s"https://raw.githubusercontent.com/raquo/scalafmt-config/refs/tags/$version/.scalafmt.shared.conf",
+    versionFile = projectDir / ".downloads" / ".scalafmt.shared.conf.version",
+    outputFile = projectDir / ".downloads" / ".scalafmt.shared.conf",
+    processOutput = "#\n# DO NOT EDIT. See SourceDownloader in build.sbt\n" + _
+  )
+}
+
+Global / onLoad := {
+  (Global / onLoad).value andThen { state => preload.key.label :: state }
+}
 
 // Makes sure to increment the version for local development
 ThisBuild / version := dynverGitDescribeOutput.value
@@ -110,3 +131,8 @@ val noPublish = Seq(
   (publish / skip) := true,
   (publishLocal / skip) := true
 )
+
+// https://github.com/JetBrains/sbt-ide-settings
+SettingKey[Seq[File]]("ide-excluded-directories").withRank(KeyRanks.Invisible) := Seq(
+  ".downloads", ".idea", ".metals", ".bloop", ".bsp"
+).map(file)

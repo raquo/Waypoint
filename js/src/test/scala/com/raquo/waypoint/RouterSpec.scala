@@ -2,8 +2,8 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage._
 import org.scalajs.dom
 import upickle.default._
 
@@ -72,8 +72,4 @@ class RouterSpec extends UnitSpec {
     router.currentPageSignal.now() shouldBe LibraryPage(100)
   }
 
-  // @TODO[Test]
-  //it ("SplitRender") {
-  //
-  //}
 }
