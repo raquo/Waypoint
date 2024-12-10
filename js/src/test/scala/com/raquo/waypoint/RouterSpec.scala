@@ -43,9 +43,7 @@ class RouterSpec extends UnitSpec {
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
     getPageTitle = _.toString,
     serializePage = page => write(page)(AppPage.rw),
-    deserializePage = pageStr => read(pageStr)(AppPage.rw)
-  )(
-    popStateEvents = L.windowEvents(_.onPopState),
+    deserializePage = pageStr => read(pageStr)(AppPage.rw),
     owner = testOwner,
     initialUrl = "http://localhost/app/library/700",
     origin = "http://localhost"

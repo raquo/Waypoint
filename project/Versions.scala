@@ -6,15 +6,15 @@ object Versions {
 
   // -- Dependencies --
 
-  val Airstream = "17.0.0"
+  val Laminar = "17.0.0"
+
+  val Airstream = "17.2.0-M2-SNAPSHOT"
 
   val UrlDsl = "0.6.2"
 
   val ScalaJsDom = "2.8.0"
 
   // -- Test --
-
-  val Laminar = "17.0.0"
 
   val Upickle = "2.0.0"
 

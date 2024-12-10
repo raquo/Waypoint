@@ -4,6 +4,16 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v9.0.0 – Dec 2024
+
+* **Build: Waypoint depends on Laminar now (not just Airstream)**
+  * New: `navigateTo` example method from the docs is now available on `Router`
+    * Unlike the example, it does not reset scroll position – do that yourself by observing to `currentPageSignal`
+  * _Migration: `Router` constructor is now a single argument list, `popStateEvents` and `owner` now have default values._
+* **New: Total and Partial route types, to improve type-safety for the total routes.**
+* New: `Router.replacePageTitle`
+* Fix: `SplitRender.signal` should be a lazy val, not def.
+
 #### v8.0.1 – Aug 2024
 * Build: Update URL DSL to 0.6.2
   * Fixed a case with `listParam` where matching failed if no query parameters were provided in the URL, whereas it should have matched as `Nil`. Thanks, [@arturaz](https://github.com/arturaz)!

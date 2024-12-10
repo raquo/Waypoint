@@ -53,9 +53,7 @@ class ContextRouteBuilderSpec extends UnitSpec {
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
     getPageTitle = _.toString,
     serializePage = page => write(page)(PageBundle.rw),
-    deserializePage = pageStr => read(pageStr)(PageBundle.rw)
-  )(
-    popStateEvents = L.windowEvents(_.onPopState),
+    deserializePage = pageStr => read(pageStr)(PageBundle.rw),
     owner = testOwner,
     origin = "http://localhost", // dom.window.location.origin.get
     initialUrl = "http://localhost/app/library/700"

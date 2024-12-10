@@ -158,9 +158,7 @@ class BasePathSpec extends UnitSpec {
           ),
           getPageTitle = _.pageTitle,
           serializePage = page => write(page)(AppPage.rw),
-          deserializePage = pageStr => read(pageStr)(AppPage.rw)
-        )(
-          popStateEvents = L.windowEvents(_.onPopState),
+          deserializePage = pageStr => read(pageStr)(AppPage.rw),
           owner = testOwner,
           origin = origin,
           initialUrl = origin + s"${basePath}/app/library/700"

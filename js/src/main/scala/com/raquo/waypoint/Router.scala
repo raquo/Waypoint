@@ -1,14 +1,11 @@
 package com.raquo.waypoint
 
-import com.raquo.airstream.core.EventStream
-import com.raquo.airstream.eventbus.EventBus
-import com.raquo.airstream.ownership.Owner
-import com.raquo.airstream.state.StrictSignal
+import com.raquo.laminar.api.L._
 import org.scalajs.dom
 
 import scala.scalajs.js
 import scala.scalajs.js.JSON
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * @param routes              - List of routes that this router can handle. You should only have one router for your
@@ -37,7 +34,7 @@ import scala.util.Try
   *                              If you want to perform any logic (such as redirects) in case of this fallback,
   *                              put it in the renderer (whatever you have responding to router.\$currentPage).
   *
-  * @param \$popStateEvent     - typically windowEvents.onPopState in Laminar
+  * @param popStateEvents      - typically windowEvents(_.onPopState) in Laminar
   *
   * @param owner               - typically unsafeWindowOwner in Laminar (if the router should never die, i.e. it's a whole app router)
   *
@@ -53,10 +50,9 @@ class Router[BasePage](
   deserializePage: String => BasePage,
   getPageTitle: BasePage => String,
   routeFallback: String => BasePage = Router.throwOnUnknownUrl,
-  deserializeFallback: Any => BasePage = Router.throwOnInvalidState
-)(
-  popStateEvents: EventStream[dom.PopStateEvent],
-  owner: Owner,
+  deserializeFallback: Any => BasePage = Router.throwOnInvalidState,
+  popStateEvents: EventStream[dom.PopStateEvent] = windowEvents(_.onPopState),
+  protected val owner: Owner = unsafeWindowOwner,
   val origin: String = Router.canonicalDocumentOrigin,
   initialUrl: String = dom.window.location.href
 ) {
@@ -93,10 +89,16 @@ class Router[BasePage](
 
       maybeInitialRoutePage.foreach { page =>
         // #Note
-        //  - `handlePopState` replies on us replacing the URL on page load as this sets a non-null state
+        //  - `handlePopState` relies on us replacing the URL on page load as this sets a non-null state
         //  - We deliberately use `forceUrl` to prevent overwriting the URL with the canonical URL for the page
         //    because the original URL might have query params that the matching page does not track
-        handleRouteEvent(pageToRouteEvent(page, replace = true, fromPopState = false, forceUrl = Utils.makeRelativeUrl(origin, initialUrl)))
+        val routeEvent = pageToRouteEvent(
+          page,
+          replace = true,
+          fromPopState = false,
+          forceUrl = Utils.makeRelativeUrl(origin, initialUrl)
+        )
+        handleRouteEvent(routeEvent)
       }
 
       // Note: routeFallback can throw
@@ -213,11 +215,57 @@ class Router[BasePage](
     * for example because /user/123 refers to a non-existing user, something that you can't
     * know during route matching.
     *
-    * Note, this will update document.title unless the provided page's title is empty.
+    * Note, this will update dom.document.title unless the provided page's title is empty.
     * This will update the title of the current record in the history API.
     */
   def forcePage(page: BasePage): Unit = {
     forcePageBus.emit(page)
+  }
+
+  /** This returns a Laminar modifier that should be used like this:
+    *
+    * {{{
+    * a(router.navigateTo(libraryPage), "Library")
+    * button(router.navigateTo(logoutPage), "Log out")
+    * }}}
+    *
+    * When the element is clicked, it triggers Waypoint navigation to the provided page.
+    *
+    * When used with `a` link elements:
+    *  - This modifier also sets the `href` attribute to the page's absolute URL
+    *  - This modifier ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
+    *    - In that case, the browser's default link action (e.g. open in new tab) will happen instead
+    */
+  def navigateTo[Page <: BasePage](
+    page: Page,
+    replaceState: Boolean = false
+  ): Binder[Element] = Binder { el =>
+    // #TODO[API] What about custom elements / web components? Do we need special handling for them?
+    val isLinkElement = el.ref.isInstanceOf[dom.html.Anchor]
+
+    if (isLinkElement) {
+      Try(absoluteUrlForPage(page)) match {
+        case Success(url) => el.asInstanceOf[HtmlElement].amend(href(url))
+        case Failure(err) => AirstreamError.sendUnhandledError(err)
+      }
+    }
+
+    // If element is a link, AND user was holding a modifier key while clicking:
+    //  - Do nothing, browser will open the URL in new tab / window / etc. depending on the modifier key
+    // Otherwise:
+    //  - Perform regular pushState/replaceState transition
+
+    val onRegularClick = onClick
+      .filter(ev => !(isLinkElement && (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey)))
+      .preventDefault
+
+    (onRegularClick --> { _ =>
+      if (replaceState) {
+        this.replaceState(page)
+      } else {
+        pushState(page)
+      }
+    }).bind(el)
   }
 
   // --

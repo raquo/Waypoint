@@ -22,9 +22,7 @@ class StaticRouteSpec extends JsUnitSpec {
       routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
       getPageTitle = _.pageTitle,
       serializePage = page => write(page)(AppPage.rw),
-      deserializePage = pageStr => read(pageStr)(AppPage.rw)
-    )(
-      popStateEvents = L.windowEvents(_.onPopState),
+      deserializePage = pageStr => read(pageStr)(AppPage.rw),
       owner = testOwner,
       origin = "http://localhost:8080",
       initialUrl = "http://localhost:8080/"

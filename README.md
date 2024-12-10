@@ -39,15 +39,14 @@ A **Router** is a class that provides methods to a) set the current **Page** and
 So how do **Views** fit into all of the above? We need to render certain views based on the current page reported by the router. Here's our setup:
 
 ```scala
-import com.raquo.laminar.api._
 import com.raquo.waypoint._
 import upickle.default._
 import org.scalajs.dom
 
 
-sealed trait Page
-case class UserPage(userId: Int) extends Page
-case object LoginPage extends Page
+sealed abstract class Page(val title: String)
+case class UserPage(userId: Int) extends Page("User")
+case object LoginPage extends Page("Login")
 
 implicit val UserPageRW: ReadWriter[UserPage] = macroRW
 implicit val rw: ReadWriter[Page] = macroRW
@@ -59,14 +58,11 @@ val userRoute = Route(
 )
 val loginRoute = Route.static(LoginPage, root / "login" / endOfSegments)
 
-val router = new Router[Page](
+object router extends Router[Page](
   routes = List(userRoute, loginRoute),
-  getPageTitle = _.toString, // mock page title (displayed in the browser tab next to favicon)
+  getPageTitle = page => page.title, // (document title, displayed in the browser history, and in the tab next to favicon)
   serializePage = page => write(page)(rw), // serialize page data for storage in History API log
   deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
-)(
-  popStateEvents = L.windowEvents(_.onPopState), // this is how Waypoint avoids an explicit dependency on Laminar
-  owner = L.unsafeWindowOwner // this router will live as long as the window
 )
 ```
 
@@ -115,7 +111,7 @@ val app: Div = div(
 )
 ``` 
 
-This is essentially a specialized version of the Airstream's [`split` operator](https://github.com/raquo/Laminar/blob/master/website/docs/documentation.md#performant-children-rendering--split). The big idea is the same: provide a helper that lets you provide an efficient `Signal[A] => HtmlElement` instead of the inefficient `Signal[A] => Signal[HtmlElement]`. The difference is that the split operator groups together models by key, **which is a value**, whereas SplitRender groups together models by **subtype** and refines them to a subtype much like a `currentPageSignal.collect { case p: UserPage => p }` would if `collect` method existed on Signals.
+This is essentially a specialized version of the Airstream's [`split` operator](https://laminar.dev/documentation#performant-children-rendering--split). The big idea is the same: provide a helper that lets you provide an efficient `Signal[A] => HtmlElement` instead of the inefficient `Signal[A] => Signal[HtmlElement]`. The difference is that the split operator groups together models by key, **which is a value**, whereas SplitRender groups together models by **subtype** and refines them to a subtype much like a `currentPageSignal.collect { case p: UserPage => p }` would if `collect` method existed on Signals.
 
 You should read the linked `split` docs to understand the general splitting pattern, as I will only cover this specialized case very lightly.
 
@@ -351,11 +347,47 @@ So, `router.forcePage` is often the preferred way.
 
 ## Recipes
 
+#### Resetting scroll position
+
+Typically, when you navigate from one web page to another, the scroll position of the page is reset, such that if you scroll to the middle of the page, then click a link, the browser scrolls to the top of the next page, rather than showing its middle. This is the general expectation when navigating between unrelated pages, however this is not desirable in every navigation.
+
+By default, Waypoint page transitions don't reset sroll position, however you can easily achieve this in the following way:
+
+```scala
+object router extends Router[Page](
+  routes = ...,
+  getPageTitle = ...
+  serializePage = ...,
+  deserializePage = ...
+) {
+  
+  currentPageSignal.foreach { page =>
+    dom.window.scrollTo(x = 0, y = 0) // Reset scroll position
+  }(owner)
+}
+```
+
+We put this logic inside `JsRouter` so that it can easily access the Router's `owner`. This is just one example of implementing simple, global, page transition callback.
+
+When you use the browser "back" button to navigate, the browser will automatically restore the last scroll position on the target page. This default behaviour overrides your `dom.window.scrollTo` instruction. If you don't want this, you can [disable this globally](https://developer.mozilla.org/en-US/docs/Web/API/History/scrollRestoration) using:
+
+```scala
+// Call this once, around the time when you initialize Router
+dom.window.history.scrollRestoration = dom.ScrollRestoration.manual 
+```
+
+Note that all of this is about the scroll position of the entire document / window. If you need similar logic for a different scrollable area, you will need to implement it yourself for now. See below for an example.
+
+
 #### Pages carrying state not reflected in the URL
 
-Suppose you want to "remember" vertical scroll position on a certain page, so that when you navigate away from it and then come back, it's restored. Instead of maintaining complex global variables or cookies or whatever, just include this information in the Page.
+As contemplated above, suppose you want to "remember" vertical scroll position for a scrollable area on a certain page, so that when you navigate away from that page and then come back, it's restored. The browsers do this automatically for the scroll position of the document itself, but not for scroll positions of any scrollable areas inside the page.
 
-Pages are serialized into History API state records, so when the user uses browser back button to come back to a page that they've already been to, it's not just the old URL that's restored, it's the whole Page state. On the contrary, if the user reloads the page or clicks a link that causes a page load instead of the History API transition, the Page state will be parsed from the URL, and since the URL does not include scroll position in our case, that will need to be the default scroll position of zero.
+To accomplish this, you can just include this information in the `Page`.
+
+Pages are serialized into History API state records, so when the user uses browser back button to come back to a page that they've already been to, it's not just the old URL that's restored, it's the whole Page state. So the previously recorded scroll position will be restored.
+
+In contrast, if the user **reloads** the page or clicks a link that causes a full page load instead of the History API transition, the Page state will be parsed from the URL only, and since the URL does not include scroll position in our case, that will need to be the default scroll position of zero. Like so:
 
 ```scala
 Route[NotePage, (Int, Int)](
@@ -365,9 +397,9 @@ Route[NotePage, (Int, Int)](
 )
 ```
 
-Remember that your code needs to actually scroll to the desired scroll position when loading the page. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position. Treat scroll position as a sort of "uncontrolled input" in React terms, if that makes sense.
+In addition to this, your code needs to actually scroll to the desired scroll position when loading the page. Use the [element.scrollTo](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollTo) method. You can probably just do this when switching from a different type of page to the type of page that remembers its scroll position.
 
-Lastly, normally you fire `router.pushState` to update the current page. But in case of updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
+Lastly, normally you fire `router.pushState` to update the current page. But when you're **only** updating current scroll position, you should instead fire `router.replaceState`, otherwise you will litter your browser history with a bunch of useless scrolling records.
 
 
 #### Configuring your web server
@@ -398,38 +430,27 @@ a(
 )
 ```
 
-However, this is not good enough. For instance, what if the user ctrl-clicks, wanting to open the page in a new tab? Our code above will break the user's expectations, updating the content of the current page instead of opening a new tab. We need to be smarter. Long story short, we need something like this:
+However, this is not good enough. For instance, what if the user ctrl-clicks, wanting to open the page in a new tab? Our code above will break the user's expectations, updating the content of the current page instead of opening a new tab. We need to be smarter. Long story short, `router.navigateTo(page)` does what we expect. Usage:
 
 ```scala
-def navigateTo(page: BasePage): Binder[HtmlElement] = Binder { el =>
-
-  val isLinkElement = el.ref.isInstanceOf[dom.html.Anchor]
-
-  if (isLinkElement) {
-    Try(router.absoluteUrlForPage(page)) match {
-      case Success(url) => el.amend(href(url))
-      case Failure(err) => dom.console.error(err)
-    }
-  }
-  
-  // If element is a link and user is holding a modifier while clicking:
-  //  - Do nothing, browser will open the URL in new tab / window / etc. depending on the modifier key
-  // Otherwise:
-  //  - Perform regular pushState transition
-  (onClick
-    .filter(ev => !(isLinkElement && (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey)))
-    .preventDefault
-    --> (_ => router.pushState(page))
-  ).bind(el)
-}
+a(
+  router.navigateTo(libraryPage), // also sets href attribute
+  "Library"
+)
+button(
+  router.navigateTo(logoutPage),
+  "Log out"
+)
 ```
 
-Then you can use this modifier on any link or other element safely:
+When the element is clicked, `navigateTo` triggers Waypoint navigation to the provided page. You can even have it do `replaceState` instead of `pushState` by providing the optional `replaceState = true` argument.
 
-```scala
-a(navigateTo(libraryPage), "Library") // sets `href` and conditional `onClick`
-button(navigateTo(logoutPage), "Log out") // sets unconditional `onClick` only
-```
+When used on `a` link elements, `navigateTo`:
+ - Also sets the `href` attribute to the page's absolute URL
+ - Ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
+   - In that case, the browser's default link action (e.g. open in new tab) will happen instead
+
+I encourage you to look at the implementation of the `navigateTo` method to learn how to create such custom Laminar modifiers yourself.
 
 
 #### Firefox and file:// URLs
