@@ -262,6 +262,19 @@ Then you can change the document URL with `router.pushState(newPage)` and `route
 ## Routing Extras
 
 
+### Updating Document Title
+
+Whenever the current page changes, Waypoint automatically updates the page title using the `getPageTitle: Page => String` function of the Router's constructor. But, what if your `Page` type does not contain enough information to set a meaningful title? For example, you may want to render `PersonPage(personId: String)`, but don't yet have the actual `Person(id: String, name: String)` instance that this page should render?
+
+Suppose that when your Laminar code renders `PersonPage`, it makes a network request to fetch the matching `Person` from the backend. Once you receive that data, you can call `router.replacePageTitle(person.name)` to update the document title. This will update the title of the current history record, without creating a new one (so in some sense, it's like a title-only `replaceState`).
+
+This is equivalent to calling the `dom.document.title = newTitle` JS API.
+
+As an alternative to this, you may be tempted to add `person.name` to your Page type: `PersonPage(personId: String, personName: String)` – however, that approach is not recommended, as it presents several problems:
+- You won't be able to navigate to `PersonPage` without knowing `person.name` ahead of time
+- You would need to write `person.name` into the URL (that anyone can change manually) – and on a full page load, you would have to read and use that untrusted input from there as well, which is generally undesirable.
+
+
 ### Partial Routes
 
 Waypoint's API design is centered around matching pages by ClassTag, but under the hood we just use partial functions. So, you can create routes like this too, and yes, they can actually be partial, i.e. cover only a subset of the page type. For example, here is a route that matches pages only for big numbers.  

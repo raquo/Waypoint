@@ -79,7 +79,7 @@ class Router[BasePage](
     val forcedPage = forcePageBus.events.map { page =>
       val pageTitle = getPageTitle(page)
       if (pageTitle.nonEmpty) {
-        dom.document.title = pageTitle
+        replacePageTitle(pageTitle)
       }
       page
     }
@@ -169,14 +169,42 @@ class Router[BasePage](
   //  - But forcePage can't be forceState, since that doesn't actually touch history state
   //  - Maybe it's for the better the way it is...
 
-  /** Pushes state by creating a new history record. See History API docs on MDN. */
+  /** Pushes state by creating a new history record.
+    *
+    * This is the standard method to call to navigate to another page.
+    *
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History/pushState pushState @ MDN]]
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
+    */
   def pushState(page: BasePage): Unit = {
     routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = false, fromPopState = false)))
   }
 
-  /** Replaces state without creating a new history record. See History API docs on MDN. */
+  /** Replaces state without creating a new history record.
+    *
+    * Call this when you want to "erase" the current page from history, replacing it with the new page.
+    * For example, you may want to replace the login page with the home page after a successful log in,
+    * so that if the user goes "back", they skip over the login page to go back further to the previous page.
+    *
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History/replaceState replaceState @ MDN]]
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
+    */
   def replaceState(page: BasePage): Unit = {
     routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = true, fromPopState = false)))
+  }
+
+  /** Replaces just the document title (and updates the current history record with it).
+    *
+    * If your `Page` type does not have enough information in it to set a
+    * meaningful document title, for example because you need to asynchronously
+    * fetch data containing the name/title from the backend, then you can call
+    * this method to update the document title once you know what it should be.
+    *
+    * This will work like [[replaceState]], except it will only update the title
+    * in the current history record, keeping the URL and other state data intact.
+    */
+  def replacePageTitle(title: String): Unit = {
+    dom.document.title = title
   }
 
   /** Forces router.currentPageSignal to emit this page without updating the URL or touching the history records.
@@ -186,8 +214,7 @@ class Router[BasePage](
     * know during route matching.
     *
     * Note, this will update document.title unless the provided page's title is empty.
-    * I think updating the title could affect the current record in the history API
-    * (not sure, you'd need to check if you care)
+    * This will update the title of the current record in the history API.
     */
   def forcePage(page: BasePage): Unit = {
     forcePageBus.emit(page)
@@ -211,8 +238,6 @@ class Router[BasePage](
     )
   }
 
-  // @TODO[API] I think we'll benefit from some kind of replacePageTitle method
-  //  - Rethink API a bit. Do we want page title to be part of Page?
   private def handleRouteEvent(ev: RouteEvent[BasePage]): Unit = {
     if (!ev.fromPopState) {
       if (ev.replace) {
@@ -223,7 +248,7 @@ class Router[BasePage](
     }
     // 1) Browsers don't currently support the `title` argument in pushState / replaceState
     // 2) We need to set the title when popping state too
-    dom.document.title = ev.pageTitle
+    replacePageTitle(ev.pageTitle)
   }
 
   /** This method should be added as a listener on window popstate event. Note:
