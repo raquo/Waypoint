@@ -80,7 +80,7 @@ lazy val jsSettings = Seq(
   libraryDependencies ++= Seq(
     "org.scala-js" %%% "scalajs-dom" % Versions.ScalaJsDom,
     "com.raquo" %%% "laminar" % Versions.Laminar,
-    "com.raquo" %%% "airstream" % Versions.Airstream
+    //"com.raquo" %%% "airstream" % Versions.Airstream
   ),
   scalacOptions ++= sys.env.get("CI").map { _ =>
     val localSourcesPath = (LocalRootProject / baseDirectory).value.toURI

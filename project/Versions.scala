@@ -1,14 +1,14 @@
 object Versions {
 
-  val Scala_2_13 = "2.13.14"
+  val Scala_2_13 = "2.13.15"
 
   val Scala_3 = "3.3.1"
 
   // -- Dependencies --
 
-  val Laminar = "17.0.0"
+  val Laminar = "17.2.0"
 
-  val Airstream = "17.2.0-M2-SNAPSHOT"
+  //val Airstream = "17.2.0"
 
   val UrlDsl = "0.6.2"
 
