@@ -49,7 +49,7 @@ class ContextRouteBuilderSpec extends UnitSpec {
 
   private val signupRoute = RouteWithContext.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-  def makeRouter = new Router.Object[PageBundle](
+  def makeRouter = new Router[PageBundle](
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
     getPageTitle = _.toString,
     serializePage = page => write(page)(PageBundle.rw),

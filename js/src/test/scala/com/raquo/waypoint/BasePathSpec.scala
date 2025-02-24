@@ -141,7 +141,7 @@ class BasePathSpec extends UnitSpec {
           basePath = basePath
         )
 
-        val router = new Router.Object[AppPage](
+        val router = new Router[AppPage](
           routes = List(
             libraryRoute,
             textRoute,

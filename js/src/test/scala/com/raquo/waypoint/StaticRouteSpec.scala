@@ -19,7 +19,7 @@ class StaticRouteSpec extends JsUnitSpec {
     val loginRoute = Route.static(LoginPage, root / "hello" / "login" / endOfSegments)
     val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-    val router = new Router.Object[AppPage](
+    val router = new Router[AppPage](
       routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
       getPageTitle = _.pageTitle,
       serializePage = page => write(page)(AppPage.rw),
