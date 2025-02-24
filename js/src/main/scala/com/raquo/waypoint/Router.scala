@@ -290,6 +290,9 @@ object Router {
      * in the current history record, keeping the URL and other state data intact.
      */
     def replacePageTitle(title: String): Unit
+
+    /** e.g. "http://localhost:8080", without trailing slash */
+    def origin: String
   }
 
   /** The contravariant side of the router. */
