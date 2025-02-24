@@ -70,7 +70,7 @@ class Router[BasePage](
     *  - [[routeFallback]] was invoked and threw an Exception
     *  - [[deserializeFallback]] was invoked and threw an Exception
     */
-  override val currentPageSignal: StrictSignal[BasePage] = {
+  val currentPageSignal: StrictSignal[BasePage] = {
     val pageFromRoute = routeEventBus.events.map(_.page)
     val forcedPage = forcePageBus.events.map { page =>
       val pageTitle = getPageTitle(page)
@@ -146,17 +146,17 @@ class Router[BasePage](
   }
 
   /** Note: This does not consider fallback pages unless you provided routes for them.
-   *
-   * @throws Exception when matching route is not found in router.
-   */
+    *
+    * @throws Exception when matching route is not found in router.
+    */
   def absoluteUrlForPage(page: BasePage): String = {
     origin + relativeUrlForPage(page)
   }
 
   /** Note: This does not consider fallback pages unless you provided routes for them.
-   *
-   * @throws Exception when matching route is not found in router.
-   */
+    *
+    * @throws Exception when matching route is not found in router.
+    */
   def relativeUrlForPage(page: BasePage): String = {
     var url: Option[String] = None
     routes.exists { route =>
@@ -172,71 +172,71 @@ class Router[BasePage](
   //  - Maybe it's for the better the way it is...
 
   /** Pushes state by creating a new history record.
-   *
-   * This is the standard method to call to navigate to another page.
-   *
-   * [[https://developer.mozilla.org/en-US/docs/Web/API/History/pushState pushState @ MDN]]
-   * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
-   */
-  override def pushState(page: BasePage): Unit = {
+    *
+    * This is the standard method to call to navigate to another page.
+    *
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History/pushState pushState @ MDN]]
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
+    */
+  def pushState(page: BasePage): Unit = {
     routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = false, fromPopState = false)))
   }
 
   /** Replaces state without creating a new history record.
-   *
-   * Call this when you want to "erase" the current page from history, replacing it with the new page.
-   * For example, you may want to replace the login page with the home page after a successful log in,
-   * so that if the user goes "back", they skip over the login page to go back further to the previous page.
-   *
-   * [[https://developer.mozilla.org/en-US/docs/Web/API/History/replaceState replaceState @ MDN]]
-   * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
-   */
+    *
+    * Call this when you want to "erase" the current page from history, replacing it with the new page.
+    * For example, you may want to replace the login page with the home page after a successful log in,
+    * so that if the user goes "back", they skip over the login page to go back further to the previous page.
+    *
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History/replaceState replaceState @ MDN]]
+    * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
+    */
   def replaceState(page: BasePage): Unit = {
     routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = true, fromPopState = false)))
   }
 
   /** Replaces just the document title (and updates the current history record with it).
-   *
-   * If your `Page` type does not have enough information in it to set a
-   * meaningful document title, for example because you need to asynchronously
-   * fetch data containing the name/title from the backend, then you can call
-   * this method to update the document title once you know what it should be.
-   *
-   * This will work like [[In.replaceState]], except it will only update the title
-   * in the current history record, keeping the URL and other state data intact.
-   */
+    *
+    * If your `Page` type does not have enough information in it to set a
+    * meaningful document title, for example because you need to asynchronously
+    * fetch data containing the name/title from the backend, then you can call
+    * this method to update the document title once you know what it should be.
+    *
+    * This will work like [[replaceState]], except it will only update the title
+    * in the current history record, keeping the URL and other state data intact.
+    */
   def replacePageTitle(title: String): Unit = {
     dom.document.title = title
   }
 
   /** Forces router.currentPageSignal to emit this page without updating the URL or touching the history records.
-   *
-   * Use this to display a full screen "not found" page when the route matched but is invalid
-   * for example because /user/123 refers to a non-existing user, something that you can't
-   * know during route matching.
-   *
-   * Note, this will update dom.document.title unless the provided page's title is empty.
-   * This will update the title of the current record in the history API.
-   */
+    *
+    * Use this to display a full screen "not found" page when the route matched but is invalid
+    * for example because /user/123 refers to a non-existing user, something that you can't
+    * know during route matching.
+    *
+    * Note, this will update dom.document.title unless the provided page's title is empty.
+    * This will update the title of the current record in the history API.
+    */
   def forcePage(page: BasePage): Unit = {
     forcePageBus.emit(page)
   }
 
   /** This returns a Laminar modifier that should be used like this:
-   *
-   * {{{
-   * a(router.navigateTo(libraryPage), "Library")
-   * button(router.navigateTo(logoutPage), "Log out")
-   * }}}
-   *
-   * When the element is clicked, it triggers Waypoint navigation to the provided page.
-   *
-   * When used with `a` link elements:
-   *  - This modifier also sets the `href` attribute to the page's absolute URL
-   *  - This modifier ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
-   *    - In that case, the browser's default link action (e.g. open in new tab) will happen instead
-   */
-  override def navigateTo(
+    *
+    * {{{
+    * a(router.navigateTo(libraryPage), "Library")
+    * button(router.navigateTo(logoutPage), "Log out")
+    * }}}
+    *
+    * When the element is clicked, it triggers Waypoint navigation to the provided page.
+    *
+    * When used with `a` link elements:
+    *  - This modifier also sets the `href` attribute to the page's absolute URL
+    *  - This modifier ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
+    *    - In that case, the browser's default link action (e.g. open in new tab) will happen instead
+    */
+  def navigateTo(
     page: BasePage,
     replaceState: Boolean = false
   ): Binder[Element] = Binder { el =>
