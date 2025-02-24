@@ -95,7 +95,7 @@ class DynamicRouteSpec extends UnitSpec {
     pattern = (root / "docs" / "component" / segment[String] / endOfSegments) ? param[String]("group")
   )
 
-  val router = new Router[AppPage](
+  val router = new Router.Object[AppPage](
     routes = List(
       libraryRoute,
       textRoute,

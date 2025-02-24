@@ -39,7 +39,7 @@ class RouterSpec extends UnitSpec {
 
   private val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-  def makeRouter = new Router[AppPage](
+  def makeRouter = new Router.Object[AppPage](
     routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
     getPageTitle = _.toString,
     serializePage = page => write(page)(AppPage.rw),
