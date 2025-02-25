@@ -340,7 +340,7 @@ object Router {
     def replacePageTitle(title: String): Unit
 
     /** @see [[Router.origin]] */
-    def origin: String
+    val origin: String
   }
 
   /** The contravariant side of the router. */
@@ -371,7 +371,7 @@ object Router {
   /** The covariant side of the router. */
   trait Out[+BasePage] extends Shared {
     /** @see [[Router.currentPageSignal]] */
-    def currentPageSignal: StrictSignal[BasePage]
+    val currentPageSignal: StrictSignal[BasePage]
 
     /** @see [[Router.pageForAbsoluteUrl]] */
     def pageForAbsoluteUrl(url: String): Option[BasePage]
