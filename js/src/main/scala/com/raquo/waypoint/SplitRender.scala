@@ -76,7 +76,7 @@ case class SplitRender[Page, View](
         }
       }
 
-      nextView.getOrElse(throw new Exception("Page did not match any renderer: " + nextPage.toString))
+      nextView.getOrElse(throw new WaypointException("Page did not match any renderer: " + nextPage.toString))
     }
   }
 }

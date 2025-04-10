@@ -18,7 +18,7 @@ sealed abstract class Route[Page, Args] private[waypoint] (
   basePath: String
 ) {
   if (basePath.nonEmpty && !basePath.startsWith("/")) {
-    throw new Exception(s"Route's basePath, when not empty, must start with `/`. basePath is `$basePath` for this route.")
+    throw new WaypointException(s"Route's basePath, when not empty, must start with `/`. basePath is `$basePath` for this route.")
   }
 
   protected val matchEncodePF: PartialFunction[Any, Args]
@@ -45,7 +45,7 @@ sealed abstract class Route[Page, Args] private[waypoint] (
     */
   def pageForAbsoluteUrl(origin: String, url: String): Option[Page] = {
     if (origin == "null") {
-      throw new Exception("pageForAbsoluteUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
+      throw new WaypointException("pageForAbsoluteUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
     }
     val originMatches = Utils.absoluteUrlMatchesOrigin(origin, url)
     val urlToMatch = if (originMatches) url.substring(origin.length) else url
@@ -64,10 +64,10 @@ sealed abstract class Route[Page, Args] private[waypoint] (
     */
   def pageForRelativeUrl(origin: String, url: String): Option[Page] = {
     if (origin == "null") {
-      throw new Exception("pageForRelativeUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
+      throw new WaypointException("pageForRelativeUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
     }
     if (!Utils.isRelative(url)) {
-      throw new Exception(s"Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
+      throw new WaypointException(s"Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
     }
     if (url.startsWith(basePath)) {
       val urlWithoutBasePath = url.substring(basePath.length)
