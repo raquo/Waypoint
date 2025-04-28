@@ -240,12 +240,14 @@ class Router[BasePage](
     page: BasePage,
     replaceState: Boolean = false
   ): Binder[Element] = Binder { el =>
+    // #TODO[Airstream/Laminar] We should not need two redundant implementations of navigateTo (but we want to optimize performance)
+    //  - We should work on StaticSource type, and perhaps add `mapSource` method on Source for some simple transforms?
     // #TODO[API] What about custom elements / web components? Do we need special handling for them?
     val isLinkElement = el.ref.isInstanceOf[dom.html.Anchor]
 
     if (isLinkElement) {
       Try(absoluteUrlForPage(page)) match {
-        case Success(url) => el.asInstanceOf[HtmlElement].amend(href(url))
+        case Success(url) => href(url)(el.asInstanceOf[HtmlElement])
         case Failure(err) => AirstreamError.sendUnhandledError(err)
       }
     }
@@ -267,6 +269,75 @@ class Router[BasePage](
       }
     }).bind(el)
   }
+
+  /** This is similar to the other [[navigateTo]] method, except it takes a Signal[Page] rather than just Page.
+    *
+    * This returns a Laminar modifier that should be used like this:
+    *
+    * {{{
+    * val signalOfPage: Signal[Page] = ???
+    * a(
+    *   router.navigateTo(signalOfPage),
+    *   "Go to page"
+    * )
+    * button(
+    *   router.navigateTo(signalOfPage),
+    *   signalOfPage.map(_.pageName)
+    * )
+    * }}}
+    *
+    * When the element is clicked, it triggers Waypoint navigation to the provided page.
+    *
+    * When used with `a` link elements:
+    *  - This modifier also sets the `href` attribute to the page's absolute URL
+    *  - This modifier ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
+    *    - In that case, the browser's default link action (e.g. open in new tab) will happen instead
+    */
+  def navigateTo(
+    pageSignal: Signal[BasePage],
+    replaceState: Boolean
+  ): Binder[Element] = Binder { el =>
+    // #TODO[API] What about custom elements / web components? Do we need special handling for them?
+    val isLinkElement = el.ref.isInstanceOf[dom.html.Anchor]
+
+    if (isLinkElement) {
+      (pageSignal --> { page =>
+        Try(absoluteUrlForPage(page)) match {
+          case Success(url) =>
+            href(url)(el.asInstanceOf[HtmlElement])
+          case Failure(err) =>
+            AirstreamError.sendUnhandledError(err)
+        }
+      }).bind(el)
+    }
+
+    // If element is a link, AND user was holding a modifier key while clicking:
+    //  - Do nothing, browser will open the URL in new tab / window / etc. depending on the modifier key
+    // Otherwise:
+    //  - Perform regular pushState/replaceState transition
+
+    val onRegularClick = onClick
+      .filter(ev => !(isLinkElement && (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey)))
+      .preventDefault
+
+    (onRegularClick(_.sample(pageSignal)) --> { page =>
+      if (replaceState) {
+        this.replaceState(page)
+      } else {
+        pushState(page)
+      }
+    }).bind(el)
+  }
+
+  // #TODO[API,Laminar,Airstream] We can't have multiple overloads with default args.
+  //  Need to use a single SignalSource for a single, efficient, implementation for all of those.
+  /** Version of `navigateTo(pageSignal)` with `replaceState = false (the default)` */
+  def navigateTo(
+    pageSignal: Signal[BasePage]
+  ): Binder[Element] = {
+    navigateTo(pageSignal, replaceState = false)
+  }
+
 
   // --
 
@@ -365,6 +436,17 @@ object Router {
     def navigateTo(
       page: BasePage,
       replaceState: Boolean = false
+    ): Binder[Element]
+
+    /** @see [[Router.navigateTo]] */
+    def navigateTo(
+      pageSignal: Signal[BasePage],
+      replaceState: Boolean
+    ): Binder[Element]
+
+    /** @see [[Router.navigateTo]] */
+    def navigateTo(
+      pageSignal: Signal[BasePage]
     ): Binder[Element]
   }
 
