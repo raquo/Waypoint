@@ -55,7 +55,7 @@ class Router[BasePage](
   protected val owner: Owner = unsafeWindowOwner,
   val origin: String = Router.canonicalDocumentOrigin,
   initialUrl: String = dom.window.location.href
-) {
+) extends Router.All[BasePage] {
 
   private val routeEventBus = new EventBus[RouteEvent[BasePage]]
 
@@ -236,8 +236,8 @@ class Router[BasePage](
     *  - This modifier ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
     *    - In that case, the browser's default link action (e.g. open in new tab) will happen instead
     */
-  def navigateTo[Page <: BasePage](
-    page: Page,
+  def navigateTo(
+    page: BasePage,
     replaceState: Boolean = false
   ): Binder[Element] = Binder { el =>
     // #TODO[API] What about custom elements / web components? Do we need special handling for them?
@@ -333,8 +333,55 @@ class Router[BasePage](
   }
 
 }
-
 object Router {
+  /** The part of router that does not depend on the page type. */
+  trait Shared {
+    /** @see [[Router.replacePageTitle]] */
+    def replacePageTitle(title: String): Unit
+
+    /** @see [[Router.origin]] */
+    val origin: String
+  }
+
+  /** The contravariant side of the router. */
+  trait In[-BasePage] extends Shared {
+
+    /** @see [[Router.absoluteUrlForPage]] */
+    def absoluteUrlForPage(page: BasePage): String
+
+    /** @see [[Router.relativeUrlForPage]] */
+    def relativeUrlForPage(page: BasePage): String
+
+    /** @see [[Router.pushState]] */
+    def pushState(page: BasePage): Unit
+
+    /** @see [[Router.replaceState]] */
+    def replaceState(page: BasePage): Unit
+
+    /** @see [[Router.forcePage]] */
+    def forcePage(page: BasePage): Unit
+
+    /** @see [[Router.navigateTo]] */
+    def navigateTo(
+      page: BasePage,
+      replaceState: Boolean = false
+    ): Binder[Element]
+  }
+
+  /** The covariant side of the router. */
+  trait Out[+BasePage] extends Shared {
+    /** @see [[Router.currentPageSignal]] */
+    val currentPageSignal: StrictSignal[BasePage]
+
+    /** @see [[Router.pageForAbsoluteUrl]] */
+    def pageForAbsoluteUrl(url: String): Option[BasePage]
+
+    /** @see [[Router.pageForRelativeUrl]] */
+    def pageForRelativeUrl(url: String): Option[BasePage]
+  }
+
+  /** The full router. */
+  trait All[BasePage] extends Router.In[BasePage] with Router.Out[BasePage]
 
   /** Like Route.fragmentBasePath, but can be used locally with file:// URLs */
   def localFragmentBasePath: String = {
