@@ -8,7 +8,9 @@ object Utils {
   }
 
   @inline private[waypoint] def absoluteUrlMatchesOrigin(origin: String, url: String): Boolean = {
-    url.startsWith(origin + "/")
+    // Not all browsers (like Tauri) add '/' to the end of the URL automatically, so we also check for 
+    // an exact match.
+    url == origin || url.startsWith(origin + "/")
   }
 
   private[waypoint] def makeRelativeUrl(origin: String, absoluteUrl: String): String = {
