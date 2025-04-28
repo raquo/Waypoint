@@ -17,7 +17,7 @@ object Utils {
     if (absoluteUrlMatchesOrigin(origin, absoluteUrl)) {
       absoluteUrl.substring(origin.length)
     } else {
-      throw new Exception(s"Can not make `$absoluteUrl` into relative URL, origin does not match `$origin`.")
+      throw new WaypointException(s"Can not make `$absoluteUrl` into relative URL, origin does not match `$origin`.")
     }
   }
 

@@ -82,7 +82,7 @@ class Router[BasePage](
 
     lazy val initialPage = {
       if (!Utils.absoluteUrlMatchesOrigin(origin, url = initialUrl)) {
-        throw new Exception(s"Initial URL does not belong to origin: $initialUrl vs $origin/ - Use the full absolute URL for initialUrl, and don't include the trailing slash in origin")
+        throw new WaypointException(s"Initial URL does not belong to origin: $initialUrl vs $origin/ - Use the full absolute URL for initialUrl, and don't include the trailing slash in origin")
       }
 
       val maybeInitialRoutePage = pageForAbsoluteUrl(initialUrl)
@@ -135,7 +135,7 @@ class Router[BasePage](
   /** @throws Exception when url is not relative or is malformed */
   def pageForRelativeUrl(url: String): Option[BasePage] = {
     if (!Utils.isRelative(url)) {
-      throw new Exception("Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
+      throw new WaypointException("Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
     }
     var page: Option[BasePage] = None
     routes.exists { route =>
@@ -163,7 +163,7 @@ class Router[BasePage](
       url = route.relativeUrlForPage(page)
       url.isDefined
     }
-    url.getOrElse(throw new Exception(s"Router has no route for this page: $page"))
+    url.getOrElse(throw new WaypointException(s"Router has no route for this page: $page"))
   }
 
   // @TODO[Naming] Rename {push,replace}State to {push,replace}Page?
@@ -346,7 +346,7 @@ object Router {
   }
 
   private val throwOnUnknownUrl = (url: String) => {
-    throw new Exception("Unable to parse URL into a Page, it does not match any routes: " + url)
+    throw new WaypointException("Unable to parse URL into a Page, it does not match any routes: " + url)
   }
 
   /** History State can be any serializable JS value. Could be a string, a plain object, etc.
@@ -354,7 +354,7 @@ object Router {
     */
   private val throwOnInvalidState = (state: Any) => {
     // @TODO `null` is needed to work around https://github.com/lampepfl/dotty/issues/11943, drop it later
-    throw new Exception("Unable to deserialize history state: " + JSON.stringify(state.asInstanceOf[js.Any], null))
+    throw new WaypointException("Unable to deserialize history state: " + JSON.stringify(state.asInstanceOf[js.Any], null))
   }
 
   /** In Firefox, `file://` URLs have "null" (a string) as location.origin instead of "file://" like in Chrome or Safari.
