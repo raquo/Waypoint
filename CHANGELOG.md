@@ -4,6 +4,13 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### v10.0.0-M1 – Apr 2025
+
+* New: Overload for `router.navigateTo` that accepts `Signal[Page]` instead of `Page`.
+* New: `Router[Page]` now extends traits `Router.In[-Page]`, `Router.Out[+Page]`, and `Router.All[Page]` that make it easier to abstract over routing functionality. For example, if you want to write a helper that needs contravariance in `Page`, you can use `Router.In[-Page]` instead of the invariant `Router`. Thanks, [@arturaz](https://github.com/arturaz)!
+* New: All errors thrown by waypoint are now of new type `WaypointException`, and their message has `[Waypoint] ` prepended to it. Thanks, [@arturaz](https://github.com/arturaz)!
+* Fix: URL matching bug fix for Tauri ([#28](https://github.com/raquo/Waypoint/pull/28)). Thanks, [@arturaz](https://github.com/arturaz)! 
+
 #### v9.0.0 – Dec 2024
 
 * **Build: Waypoint depends on Laminar now (not just Airstream)**

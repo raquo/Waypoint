@@ -12,7 +12,7 @@ Waypoint can be used with other Scala.js libraries too, not just Laminar. More o
 
 Waypoint docs are not as exhaustive as Laminar's, but we have examples, and Waypoint is very, very small, so this shouldn't be a big deal. Just make sure you understand how the browser's History API works.
 
-    "com.raquo" %%% "waypoint" % "9.0.0"   // Depends on Laminar 17.2.0 & URL DSL 0.6.2
+    "com.raquo" %%% "waypoint" % "10.0.0-M1"   // Depends on Laminar 17.2.0 & URL DSL 0.6.2
 
 
 
@@ -449,6 +449,8 @@ When used on `a` link elements, `navigateTo`:
  - Also sets the `href` attribute to the page's absolute URL
  - Ignores clicks when the user is holding a modifier key like Ctrl/Shift/etc. while clicking
    - In that case, the browser's default link action (e.g. open in new tab) will happen instead
+
+Waypoint also offers a version on version of navigateTo that accepts a `Signal[Page]` instead of `Page` – for cases when the page you want to navigate to changes over time.
 
 I encourage you to look at the implementation of the `navigateTo` method to learn how to create such custom Laminar modifiers yourself.
 

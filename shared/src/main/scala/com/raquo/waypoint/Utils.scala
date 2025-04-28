@@ -8,8 +8,9 @@ object Utils {
   }
 
   @inline private[waypoint] def absoluteUrlMatchesOrigin(origin: String, url: String): Boolean = {
-    // Not all browsers (like Tauri) add '/' to the end of the URL automatically, so we also check for 
-    // an exact match.
+    // In typical browsers, when the user navigates to a "root" URL like `http://example.com`,
+    // the browser adds a trailing slash and sets the URL to `http://example.com/`.
+    // However, Tauri does not do this, so we also need to check `url == origin`.
     url == origin || url.startsWith(origin + "/")
   }
 
