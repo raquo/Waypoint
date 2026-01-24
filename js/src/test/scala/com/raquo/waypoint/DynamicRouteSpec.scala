@@ -1,19 +1,23 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
+import org.scalajs.dom
 import upickle.default._
 
+import scala.scalajs.js
 import scala.util.Try
 
 class DynamicRouteSpec extends UnitSpec {
 
   private val testOwner = new Owner {}
 
-  val origin = "http://example.com"
+  // #TODO[Test] We use `localhost` instead of example.com because
+  // the test framework instantiates JSDOM with this origin, and we
+  // currently don't have access to change that.
+  val origin = "http://localhost"
 
   val libraryRoute: Route[LibraryPage, Int] = Route(
     encode = _.libraryId,
@@ -95,7 +99,10 @@ class DynamicRouteSpec extends UnitSpec {
     pattern = (root / "docs" / "component" / segment[String] / endOfSegments) ? param[String]("group")
   )
 
-  val router = new Router[AppPage](
+  // Set initial URL
+  dom.window.history.pushState(new js.Object, "", "/app/library/700")
+
+  val router: Router[AppPage] = new Router[AppPage](
     routes = List(
       libraryRoute,
       textRoute,
@@ -116,7 +123,6 @@ class DynamicRouteSpec extends UnitSpec {
     deserializePage = pageStr => read(pageStr)(AppPage.rw),
     owner = testOwner,
     origin = origin,
-    initialUrl = origin + "/app/library/700"
   )
 
   it("segment routes - parse urls - match") {
@@ -259,7 +265,6 @@ class DynamicRouteSpec extends UnitSpec {
   }
 
   it("fragment routes - generate urls") {
-
     @inline def urlForPage(page: AppPage): Option[String] = Try(router.relativeUrlForPage(page)).toOption
 
     urlForPage(LegalPage(section = "foreword")) shouldBe Some("/legal#foreword")

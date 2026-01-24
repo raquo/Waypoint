@@ -27,7 +27,7 @@ sealed abstract class Route[Page, Args] private[waypoint] (
 
   protected val createRelativeUrl: Args => String
 
-  protected val matchRelativeUrl: String => Option[Args]
+  protected val matchAbsoluteUrl: String => Option[Args]
 
   /** @return None if the [[Route]] is partial and the given object does not match. */
   def argsFromPage(page: Page): Option[Args] = encodeOpt(page)
@@ -47,11 +47,9 @@ sealed abstract class Route[Page, Args] private[waypoint] (
     if (origin == "null") {
       throw new WaypointException("pageForAbsoluteUrl was provided with a \"null\" origin. See https://github.com/raquo/Waypoint#firefox-and-file-urls")
     }
-    val originMatches = Utils.absoluteUrlMatchesOrigin(origin, url)
-    val urlToMatch = if (originMatches) url.substring(origin.length) else url
     // @TODO[API] We evaluate the page unconditionally, as that will consistently throw in case of malformed URL
-    val maybePage = matchRelativeUrl(urlToMatch).flatMap(decodeOpt) // This just ignores the origin present in the url
-    if (originMatches) {
+    val maybePage = matchAbsoluteUrl(url).flatMap(decodeOpt)
+    if (Utils.absoluteUrlMatchesOrigin(origin, url)) {
       maybePage
     } else {
       None
@@ -69,14 +67,30 @@ sealed abstract class Route[Page, Args] private[waypoint] (
     if (!Utils.isRelative(url)) {
       throw new WaypointException(s"Relative URL must be relative to the origin, i.e. it must start with /, whereas `$url` was given.")
     }
-    if (url.startsWith(basePath)) {
+    // basepath ends in #, and the url contains nothing except the basepath without said `#` symbol.
+    lazy val trailingHashSpecialCase = {
+      Utils.basePathHasEmptyFragment(basePath) &&
+      url == Utils.basePathWithoutFragment(basePath)
+    }
+
+    // Carefullly remove the basepath from the absolute URL
+    val absoluteUrlOpt = if (url.startsWith(basePath)) {
+      // Basically we want to remove the base path here, as if it doesn't exist.
       val urlWithoutBasePath = url.substring(basePath.length)
-      matchRelativeUrl(origin + urlWithoutBasePath).flatMap(decodeOpt)
-    } else if (Utils.basePathHasEmptyFragment(basePath) && url == Utils.basePathWithoutFragment(basePath)) {
-      matchRelativeUrl(origin).flatMap(decodeOpt)
+      if (urlWithoutBasePath.isEmpty || urlWithoutBasePath.startsWith("/") || urlWithoutBasePath.startsWith("?")) {
+        Some(origin + urlWithoutBasePath)
+      } else {
+        // if urlWithoutBasePath does not include a separator, we need to include it ourselves.
+        // This could happen if basepath ends in #, and the hash url does not start with '/'.
+        Some(origin + "/" + urlWithoutBasePath)
+      }
+    } else if (trailingHashSpecialCase) {
+      Some(origin)
     } else {
       None
     }
+
+    absoluteUrlOpt.flatMap(matchAbsoluteUrl).flatMap(decodeOpt)
   }
 
   private def encodeOpt(page: Any): Option[Args] = {
@@ -110,7 +124,7 @@ object Route {
     override protected val matchEncodePF: PartialFunction[Any, Args],
     override protected val decodePF: PartialFunction[Args, Page],
     override protected val createRelativeUrl: Args => String,
-    override protected val matchRelativeUrl: String => Option[Args],
+    override protected val matchAbsoluteUrl: String => Option[Args],
     basePath: String
   ) extends Route[Page, Args](
     basePath = basePath
@@ -123,7 +137,7 @@ object Route {
     encode: Page => Args,
     decode: Args => Page,
     override protected val createRelativeUrl: Args => String,
-    override protected val matchRelativeUrl: String => Option[Args],
+    override protected val matchAbsoluteUrl: String => Option[Args],
     basePath: String
   ) extends Route[Page, Args](
     basePath = basePath
@@ -155,7 +169,7 @@ object Route {
     new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createPath(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -180,7 +194,7 @@ object Route {
       matchEncodePF = matchEncode,
       decodePF = decode,
       createRelativeUrl = args => "/" + pattern.createPath(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -195,7 +209,7 @@ object Route {
     new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption.map(_.params),
       basePath = basePath
     )
   }
@@ -219,7 +233,7 @@ object Route {
       matchEncodePF = matchEncode,
       decodePF = decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = (), params = args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.params),
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption.map(_.params),
       basePath = basePath
     )
   }
@@ -234,7 +248,7 @@ object Route {
     new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -258,7 +272,7 @@ object Route {
       matchEncodePF = matchEncode,
       decodePF = decode,
       createRelativeUrl = args => "/" + pattern.createUrlString(path = args.path, params = args.params),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -273,7 +287,7 @@ object Route {
     new Total(
       encode, decode,
       createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption.map(_.fragment),
       basePath = basePath
     )
   }
@@ -297,7 +311,7 @@ object Route {
       matchEncodePF = matchEncode,
       decodePF = decode,
       createRelativeUrl = args => "/" + pattern.fragmentOnly.createPart(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption.map(_.fragment),
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption.map(_.fragment),
       basePath = basePath
     )
   }
@@ -315,7 +329,7 @@ object Route {
         val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
         "/" + pattern.createPart(patternArgs)
       },
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -342,7 +356,7 @@ object Route {
         val patternArgs = PathQueryFragmentMatching(path = args.path, query = (), fragment = args.fragment)
         "/" + pattern.createPart(patternArgs)
       },
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -360,7 +374,7 @@ object Route {
         val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
         "/" + pattern.createPart(patternArgs)
       },
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -387,7 +401,7 @@ object Route {
         val patternArgs = PathQueryFragmentMatching(path = (), query = args.query, fragment = args.fragment)
         "/" + pattern.createPart(patternArgs)
       },
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -405,7 +419,7 @@ object Route {
         val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
         "/" + pattern.createPart(patternArgs)
       },
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -432,7 +446,7 @@ object Route {
         val patternArgs = PathQueryFragmentMatching(path = args.path, query = args.query, fragment = args.fragment)
         "/" + pattern.createPart(patternArgs)
       },
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -453,7 +467,7 @@ object Route {
       encode = _ => (),
       decode = _ => staticPage,
       createRelativeUrl = args => "/" + pattern.createPath(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }
@@ -474,7 +488,7 @@ object Route {
       matchEncodePF = { case p if p == staticPage => () },
       decodePF = { case _ => staticPage },
       createRelativeUrl = args => "/" + pattern.createPath(args),
-      matchRelativeUrl = relativeUrl => pattern.matchRawUrl(relativeUrl).toOption,
+      matchAbsoluteUrl = absoluteUrl => pattern.matchRawUrl(absoluteUrl).toOption,
       basePath = basePath
     )
   }

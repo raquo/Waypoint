@@ -1,13 +1,13 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.AppPage
 import com.raquo.waypoint.fixtures.AppPage._
-import org.scalatest.Assertion
+import org.scalajs.dom
 import upickle.default._
 
-import scala.util.{Success, Try}
+import scala.scalajs.js
+import scala.util.Try
 
 class StaticRouteSpec extends JsUnitSpec {
 
@@ -19,6 +19,9 @@ class StaticRouteSpec extends JsUnitSpec {
     val loginRoute = Route.static(LoginPage, root / "hello" / "login" / endOfSegments)
     val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
+    // Set initial URL
+    dom.window.history.pushState(new js.Object, "", "/")
+
     val router = new Router[AppPage](
       routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
       getPageTitle = _.pageTitle,
@@ -26,7 +29,7 @@ class StaticRouteSpec extends JsUnitSpec {
       deserializePage = pageStr => read(pageStr)(AppPage.rw),
       owner = testOwner,
       origin = "http://localhost:8080",
-      initialUrl = "http://localhost:8080/"
+      currentUrl = dom.window.location.href.replace("http://localhost", "http://localhost:8080") // fake origin for testing...
     )
 
     expectPageRelative(router, "/hello/login", Some(LoginPage))

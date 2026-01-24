@@ -40,7 +40,9 @@ import scala.util.{Failure, Success, Try}
   *
   * @param origin              - e.g. "http://localhost:8080", without trailing slash
   *
-  * @param initialUrl          - e.g. "http://localhost:8080/page"
+  * @param currentUrl          - typically isInitial => dom.window.location.href, but you may want to override this
+  *                              for testing or to virtually clean the URLs that Waypoint sees if something else is
+  *                              messing with your URLs (e.g. Keycloak-JS adding malformed query params)
   *
   * @throws Exception          - when [[initialUrl]] is not absolute or does not match [[origin]]
   */
@@ -54,7 +56,7 @@ class Router[BasePage](
   popStateEvents: EventStream[dom.PopStateEvent] = windowEvents(_.onPopState),
   protected val owner: Owner = unsafeWindowOwner,
   val origin: String = Router.canonicalDocumentOrigin,
-  initialUrl: String = dom.window.location.href
+  currentUrl: => String = dom.window.location.href
 ) extends Router.All[BasePage] {
 
   private val routeEventBus = new EventBus[RouteEvent[BasePage]]
@@ -80,6 +82,7 @@ class Router[BasePage](
       page
     }
 
+    val initialUrl: String = currentUrl
     lazy val initialPage = {
       if (!Utils.absoluteUrlMatchesOrigin(origin, url = initialUrl)) {
         throw new WaypointException(s"Initial URL does not belong to origin: $initialUrl vs $origin/ - Use the full absolute URL for initialUrl, and don't include the trailing slash in origin")
@@ -391,7 +394,7 @@ class Router[BasePage](
         //   history record with one that does have ev.state
         // - So end result is that we can tell that this here is a hashChange event just by looking at ev.state == null
         // https://stackoverflow.com/a/33169145/2601788
-        val absoluteUrl = dom.window.location.href
+        val absoluteUrl = currentUrl
         val relativeUrl = Utils.makeRelativeUrl(origin, absoluteUrl)
         val page = pageForAbsoluteUrl(absoluteUrl).getOrElse(routeFallback(absoluteUrl))
         pageToRouteEvent(page, replace = false, fromPopState = true, forceUrl = relativeUrl)

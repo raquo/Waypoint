@@ -5,8 +5,10 @@ import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage.{LibraryPage, _}
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
+import org.scalajs.dom
 import upickle.default._
 
+import scala.scalajs.js
 import scala.util.Try
 
 class BasePathSpec extends UnitSpec {
@@ -141,6 +143,9 @@ class BasePathSpec extends UnitSpec {
           basePath = basePath
         )
 
+        // Set initial URL
+        dom.window.history.pushState(new js.Object, "", s"${basePath}/app/library/700")
+
         val router = new Router[AppPage](
           routes = List(
             libraryRoute,
@@ -161,7 +166,7 @@ class BasePathSpec extends UnitSpec {
           deserializePage = pageStr => read(pageStr)(AppPage.rw),
           owner = testOwner,
           origin = origin,
-          initialUrl = origin + s"${basePath}/app/library/700"
+          currentUrl = dom.window.location.href.replace("http://localhost", origin) // faking origin for testing...
         )
 
         it("segment routes - parse urls - match") {

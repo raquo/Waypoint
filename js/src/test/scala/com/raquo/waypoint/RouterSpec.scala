@@ -7,6 +7,8 @@ import com.raquo.waypoint.fixtures.AppPage._
 import org.scalajs.dom
 import upickle.default._
 
+import scala.scalajs.js
+
 class RouterSpec extends UnitSpec {
 
   private val testOwner = new Owner {}
@@ -39,15 +41,19 @@ class RouterSpec extends UnitSpec {
 
   private val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-  def makeRouter = new Router[AppPage](
-    routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
-    getPageTitle = _.toString,
-    serializePage = page => write(page)(AppPage.rw),
-    deserializePage = pageStr => read(pageStr)(AppPage.rw),
-    owner = testOwner,
-    initialUrl = "http://localhost/app/library/700",
-    origin = "http://localhost"
-  )
+  def makeRouter: Router[AppPage] = {
+    // Set initial URL
+    dom.window.history.pushState(new js.Object, "", "/app/library/700")
+
+    new Router[AppPage](
+      routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
+      getPageTitle = _.toString,
+      serializePage = page => write(page)(AppPage.rw),
+      deserializePage = pageStr => read(pageStr)(AppPage.rw),
+      owner = testOwner,
+      origin = "http://localhost",
+    )
+  }
 
   it("basic history operation") {
 

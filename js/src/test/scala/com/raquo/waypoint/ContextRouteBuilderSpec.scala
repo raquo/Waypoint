@@ -6,7 +6,10 @@ import com.raquo.laminar.api._
 import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.context.{PageBundle, SharedParams}
+import org.scalajs.dom
 import upickle.default._
+
+import scala.scalajs.js
 
 class ContextRouteBuilderSpec extends UnitSpec {
 
@@ -49,15 +52,18 @@ class ContextRouteBuilderSpec extends UnitSpec {
 
   private val signupRoute = RouteWithContext.static(SignupPage, root / "signup" / "test" / endOfSegments)
 
-  def makeRouter = new Router[PageBundle](
-    routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
-    getPageTitle = _.toString,
-    serializePage = page => write(page)(PageBundle.rw),
-    deserializePage = pageStr => read(pageStr)(PageBundle.rw),
-    owner = testOwner,
-    origin = "http://localhost", // dom.window.location.origin.get
-    initialUrl = "http://localhost/app/library/700"
-  )
+  def makeRouter: Router[PageBundle] = {
+    // Set initial URL
+    dom.window.history.pushState(new js.Object, "", "/app/library/700")
+    new Router[PageBundle](
+      routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
+      getPageTitle = _.toString,
+      serializePage = page => write(page)(PageBundle.rw),
+      deserializePage = pageStr => read(pageStr)(PageBundle.rw),
+      owner = testOwner,
+      origin = "http://localhost", // dom.window.location.origin.get
+    )
+  }
 
   private def makePageUpdater[A](
     router: Router[PageBundle],
