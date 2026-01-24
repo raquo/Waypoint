@@ -45,7 +45,6 @@ lazy val root = project.in(file("."))
 
 lazy val waypoint = crossProject(JSPlatform, JVMPlatform).in(file("."))
   .settings(commonSettings)
-  .jsConfigure(_.enablePlugins(ScalaJSBundlerPlugin))
   .jsSettings(jsSettings)
 
 lazy val waypointJS = waypoint.js
@@ -89,11 +88,7 @@ lazy val jsSettings = Seq(
 
     s"${sourcesOptionName}:$localSourcesPath->$remoteSourcesPath"
   },
-  (Test / requireJsDomEnv) := true,
-  (installJsdom / version) := Versions.JsDom,
-  (webpack / version) := Versions.Webpack,
-  (startWebpackDevServer / version) := Versions.WebpackDevServer,
-  useYarn := true
+  jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv(),
 )
 
 
@@ -134,5 +129,5 @@ val noPublish = Seq(
 
 // https://github.com/JetBrains/sbt-ide-settings
 SettingKey[Seq[File]]("ide-excluded-directories").withRank(KeyRanks.Invisible) := Seq(
-  ".downloads", ".idea", ".metals", ".bloop", ".bsp"
+  ".downloads", ".idea", ".metals", ".bloop", ".bsp", "target", "node_modules"
 ).map(file)

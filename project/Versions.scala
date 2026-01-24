@@ -1,18 +1,18 @@
 object Versions {
 
-  val Scala_2_13 = "2.13.15"
+  val Scala_2_13 = "2.13.17"
 
-  val Scala_3 = "3.3.1"
+  val Scala_3 = "3.3.7"
 
   // -- Dependencies --
 
-  val Laminar = "17.2.0"
+  val Laminar = "17.3.0-SNAPSHOT"
 
   //val Airstream = "17.2.0"
 
   val UrlDsl = "0.6.2"
 
-  val ScalaJsDom = "2.8.0"
+  val ScalaJsDom = "2.8.1"
 
   // -- Test --
 
