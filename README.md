@@ -26,9 +26,9 @@ A **View** is the content that should be rendered based on current **Page**. Typ
 
 A **Page** represents a specific UI State that a **Route** (and therefore a **Router**) can have. It is typically a case class with parameters matching a given Route, such as `UserPage(userId: Int)`, or simply `LoginPage`.
 
-A **Pattern** is a construct that can extract a tuple of data from **URLs** and compile a URL from a tuple of data. For example, `root / "user" / segment[Int] / endOfSegments`. In Waypoint, patterns are provided by the [URL DSL](https://github.com/sherpal/url-dsl) library.
+A **Pattern** is a construct that can extract a tuple of data from **URLs** and compile a URL from a tuple of data. For example, `root / "user" / segment[Int]`. In Waypoint, patterns are provided by the [URL DSL](https://github.com/sherpal/url-dsl) library.
 
-A **Route** is a class that defines how a class of **Page**s corresponds to a **Pattern**, and how to convert between the two. For example, `Route.static(LoginPage, root / "login" / endOfSegments)`. Routes may be partial, i.e. match only a subset of the Pages in the class.
+A **Route** is a class that defines how a class of **Page**s corresponds to a **Pattern**, and how to convert between the two. For example, `Route.static(LoginPage, root / "login")`. Routes may be partial, i.e. match only a subset of the Pages in the class.
 
 A **Router** is a class that provides methods to a) set the current **Page** and b) listen to changes in current **Page**. Because a router manages the browser's History API, you typically instantiate only one router per `dom.window`.
 
@@ -54,9 +54,9 @@ implicit val rw: ReadWriter[Page] = macroRW
 val userRoute = Route(
   encode = userPage => userPage.userId,
   decode = arg => UserPage(userId = arg),
-  pattern = root / "user" / segment[Int] / endOfSegments
+  pattern = root / "user" / segment[Int]
 )
-val loginRoute = Route.static(LoginPage, root / "login" / endOfSegments)
+val loginRoute = Route.static(LoginPage, root / "login")
 
 object router extends Router[Page](
   routes = List(userRoute, loginRoute),
@@ -190,24 +190,26 @@ URL patterns and the matching functionality are provided by the [URL DSL](https:
 
 ```scala
 import com.raquo.waypoint._
- 
-// this matches all routes under /hello
-root / "hello"
+
+// Migration note: as of Waypoint v10.0.0-M2, `/ endOfSegments` is implied, and you need to use `ignoreRemainingSegments` when you want a looser match (see below).
 
 // this matches just /hello and /hello/ (plus whatever query params)
-root / "hello" / endOfSegments
+root / "hello"
+
+// this matches /hello as well as any route "under" it, e.g. /hello/world
+root / "hello" / ignoreRemainingSegments
 
 // this matches urls like /user/123 into Int
-root / "user" / segment[Int] / endOfSegments
+root / "user" / segment[Int]
 
 // this matches urls like /workspace/123/subsection/info into (Int, String)
-root / "workspace" / segment[Int] / "subsection" / segment[String] / endOfSegments
+root / "workspace" / segment[Int] / "subsection" / segment[String]
 
 // this matches urls like:
 //   /workspace/123?query=hello
 //   /workspace/123?query=hello&mode=1 
 // note the `.?` invocation on the `mode` param: this means it's optional, modelled as Option[Int]
-(root / "workspace" / segment[Int] / endOfSegments) ? (param[String]("query") & param[Int]("mode").?)
+(root / "workspace" / segment[Int]) ? (param[String]("query") & param[Int]("mode").?)
 ```
 
 How to use such patterns to build routes:
@@ -216,36 +218,36 @@ How to use such patterns to build routes:
 import com.raquo.waypoint._
 import urldsl.vocabulary.UrlMatching
 
-Route.static(LoginPage, root / "login" / endOfSegments)
+Route.static(LoginPage, root / "login")
 
 Route[UserPage, Int](
   encode = userPage => userPage.userId,
   decode = arg => UserPage(userId = arg),
-  pattern = root / "user" / segment[Int] / endOfSegments
+  pattern = root / "user" / segment[Int]
 )
 
 Route[WorkspacePage, (Int, String)](
   encode = workspacePage => (workspacePage.id, workspacePage.subsection),
   decode = args => WorkspacePage(id = args._1, subsection = args._2),
-  pattern = root / "workspace" / segment[Int] / "subsection" / segment[Sting] / endOfSegments
+  pattern = root / "workspace" / segment[Int] / "subsection" / segment[Sting]
 )
 
 Route.withQuery[WorkspaceSearchPage, Int, (String, Int)](
   encode = page => UrlMatching(path = page.id, params = (page.subsection, page.mode)),
   decode = args => WorkspacePage(id = args.path, subsection = args.params._1, mode = args.params._2),
-  pattern = (root / "workspace" / segment[Int] / endOfSegments) ? (param[String]("query") & param[Int]("mode"))
+  pattern = (root / "workspace" / segment[Int]) ? (param[String]("query") & param[Int]("mode"))
 )
 
 Route.onlyQuery[SearchPage, String](
   encode = page => page.query,
   decode = arg => SearchPage(query = arg),
-  pattern = (root / "search" / endOfSegments) ? (param[String]("query"))
+  pattern = (root / "search") ? (param[String]("query"))
 )
 
 Route.withFragment[BigLegalPage, String, String](
   encode = page => FragmentPatternArgs(path = page.page, query = (), fragment = page.section),
   decode = args => BigLegalPage(page = args.path, section = args.fragment),
-  pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String]
+  pattern = (root / "legal" / segment[String]) withFragment fragment[String]
 )
 ```
 
@@ -279,7 +281,7 @@ Waypoint's API design is centered around matching pages by ClassTag, but under t
 Route.applyPF[DocsPage, Int](
   matchEncode = { case DocsPage(NumPage(i)) if i > 100 => i },
   decode = { case arg if arg > 100 => DocsPage(NumPage(arg)) },
-  pattern = root / "docs" / "num" / segment[Int] / endOfSegments
+  pattern = root / "docs" / "num" / segment[Int]
 )
 ```
 
@@ -393,7 +395,7 @@ In contrast, if the user **reloads** the page or clicks a link that causes a ful
 Route[NotePage, (Int, Int)](
   encode = page => (page.libraryId, page.noteId), // scroll position is not written into the URL args
   decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0), // default scroll position that will be inferred from the URL
-  pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments
+  pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int]
 )
 ```
 

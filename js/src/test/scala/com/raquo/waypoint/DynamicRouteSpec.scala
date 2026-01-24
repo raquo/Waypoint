@@ -6,6 +6,8 @@ import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
 import org.scalajs.dom
 import upickle.default._
+import urldsl.errors.DummyError
+import urldsl.language.PathSegment
 
 import scala.scalajs.js
 import scala.util.Try
@@ -22,49 +24,49 @@ class DynamicRouteSpec extends UnitSpec {
   val libraryRoute: Route[LibraryPage, Int] = Route(
     encode = _.libraryId,
     decode = arg => LibraryPage(libraryId = arg),
-    pattern = root / "app" / "library" / segment[Int] / endOfSegments
+    pattern = root / "app" / "library" / segment[Int]
   )
 
   val textRoute: Route[TextPage, String] = Route(
     encode = _.text,
     decode = arg => TextPage(text = arg),
-    pattern = root / "app" / "test" / segment[String] / endOfSegments
+    pattern = root / "app" / "test" / segment[String]
   )
 
   val noteRoute: Route[NotePage, (Int, Int)] = Route(
     encode = page => (page.libraryId, page.noteId),
     decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
-    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments
+    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int]
   )
 
   val searchRoute: Route[SearchPage, String] = Route.onlyQuery(
     encode = page => page.query,
     decode = arg => SearchPage(arg),
-    pattern = (root / "search" / endOfSegments) ? param[String]("query")
+    pattern = (root / "search") ? param[String]("query")
   )
 
   val workspaceSearchRoute: Route[WorkspaceSearchPage, PatternArgs[String, String]] = Route.withQuery(
     encode = page => PatternArgs(page.workspaceId, page.query),
     decode = args => WorkspaceSearchPage(workspaceId = args.path, query = args.params),
-    pattern = (root / "workspace" / segment[String] / endOfSegments) ? param[String]("query")
+    pattern = (root / "workspace" / segment[String]) ? param[String]("query")
   )
 
   val legalRoute: Route[LegalPage, String] = Route.onlyFragment(
     encode = page => page.section,
     decode = arg => LegalPage(arg),
-    pattern = (root / "legal" / endOfSegments) withFragment fragment[String]
+    pattern = ((root / "legal"): PathSegment[Unit, DummyError]) withFragment fragment[String]
   )
 
   val bigLegalRoute: Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
     encode = page => FragmentPatternArgs(path = page.page, (), fragment = page.section),
     decode = args => BigLegalPage(page = args.path, section = args.fragment),
-    pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String]
+    pattern = (root / "legal" / segment[String]) withFragment fragment[String]
   )
 
   val hugeLegalRoute: Route[HugeLegalPage, FragmentPatternArgs[String, Int, String]] = Route.withQueryAndFragment(
     encode = page => FragmentPatternArgs(path = page.page, query = page.version, fragment = page.section),
     decode = args => HugeLegalPage(page = args.path, version = args.query, section = args.fragment),
-    pattern = (root / "legal" / segment[String] / endOfSegments) ? param[Int]("version") withFragment fragment[String]
+    pattern = (root / "legal" / segment[String]) ? param[Int]("version") withFragment fragment[String]
   )
 
   // partial function match routes
@@ -72,31 +74,31 @@ class DynamicRouteSpec extends UnitSpec {
   val bigNumRoute: Route[DocsPage, Int] = Route.applyPF(
     matchEncode = { case DocsPage(NumPage(i)) if i > 100 => i },
     decode = { case arg if arg > 100 => DocsPage(NumPage(arg)) },
-    pattern = root / "docs" / "num" / segment[Int] / endOfSegments
+    pattern = root / "docs" / "num" / segment[Int]
   )
 
   val negNumRoute: Route[DocsPage, Int] = Route.applyPF(
     matchEncode = { case DocsPage(NumPage(i)) if i < 0 => i },
     decode = { case arg if arg < 0 => DocsPage(NumPage(arg)) },
-    pattern = root / "docs" / "num" / segment[Int] / endOfSegments
+    pattern = root / "docs" / "num" / segment[Int]
   )
 
   val zeroNumRoute: Route[DocsPage, Int] = Route.applyPF(
     matchEncode = { case DocsPage(NumPage(i)) if i == 0 => i },
     decode = { case arg if arg == 0 => DocsPage(NumPage(arg)) },
-    pattern = root / "docs" / "zero" / segment[Int] / endOfSegments
+    pattern = root / "docs" / "zero" / segment[Int]
   )
 
   val exampleRoute: Route[DocsPage, String] = Route.onlyQueryPF(
     matchEncode = { case DocsPage(ExamplePage(s)) => s },
     decode = { case args => DocsPage(ExamplePage(args)) },
-    pattern = (root / "docs" / "example" / endOfSegments) ? param[String]("name")
+    pattern = (root / "docs" / "example") ? param[String]("name")
   )
 
   val componentRoute: Route[DocsPage, PatternArgs[String, String]] = Route.withQueryPF(
     matchEncode = { case DocsPage(ComponentPage(s, str)) => PatternArgs(s, str) },
     decode = { case args => DocsPage(ComponentPage(args.path, args.params)) },
-    pattern = (root / "docs" / "component" / segment[String] / endOfSegments) ? param[String]("group")
+    pattern = (root / "docs" / "component" / segment[String]) ? param[String]("group")
   )
 
   // Set initial URL

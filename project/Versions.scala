@@ -10,7 +10,7 @@ object Versions {
 
   //val Airstream = "17.2.0"
 
-  val UrlDsl = "0.6.2"
+  val UrlDsl = "0.7.0"
 
   val ScalaJsDom = "2.8.1"
 

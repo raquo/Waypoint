@@ -27,30 +27,30 @@ class ContextRouteBuilderSpec extends UnitSpec {
   private val libraryRoute = RouteWithContext[LibraryPage, Int](
     encode = _.libraryId,
     decode = arg => LibraryPage(libraryId = arg),
-    pattern = root / "app" / "library" / segment[Int] / endOfSegments
+    pattern = root / "app" / "library" / segment[Int]
   )
 
   private val textRoute = RouteWithContext[TextPage, String](
     encode = _.text,
     decode = arg => TextPage(text = arg),
-    pattern = root / "app" / "test" / segment[String] / endOfSegments
+    pattern = root / "app" / "test" / segment[String]
   )
 
   private val noteRoute = RouteWithContext[NotePage, (Int, Int)](
     encode = page => (page.libraryId, page.noteId),
     decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
-    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments
+    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int]
   )
 
   private val searchRoute = RouteWithContext.onlyQuery[SearchPage, String](
     encode = page => page.query,
     decode = arg => SearchPage(arg),
-    pattern = (root / "search" / endOfSegments) ? param[String]("query")
+    pattern = (root / "search") ? param[String]("query")
   )
 
-  private val loginRoute = RouteWithContext.static(LoginPage, root / "hello" / "login" / endOfSegments)
+  private val loginRoute = RouteWithContext.static(LoginPage, root / "hello" / "login")
 
-  private val signupRoute = RouteWithContext.static(SignupPage, root / "signup" / "test" / endOfSegments)
+  private val signupRoute = RouteWithContext.static(SignupPage, root / "signup" / "test")
 
   def makeRouter: Router[PageBundle] = {
     // Set initial URL

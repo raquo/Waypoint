@@ -16,30 +16,30 @@ class RouterSpec extends UnitSpec {
   private val libraryRoute = Route[LibraryPage, Int](
     encode = _.libraryId,
     decode = arg => LibraryPage(libraryId = arg),
-    pattern = root / "app" / "library" / segment[Int] / endOfSegments
+    pattern = root / "app" / "library" / segment[Int]
   )
 
   private val textRoute = Route[TextPage, String](
     encode = _.text,
     decode = arg => TextPage(text = arg),
-    pattern = root / "app" / "test" / segment[String] / endOfSegments
+    pattern = root / "app" / "test" / segment[String]
   )
 
   private val noteRoute = Route[NotePage, (Int, Int)](
     encode = page => (page.libraryId, page.noteId),
     decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
-    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments
+    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int]
   )
 
   private val searchRoute = Route.onlyQuery[SearchPage, String](
     encode = page => page.query,
     decode = arg => SearchPage(arg),
-    pattern = (root / "search" / endOfSegments) ? param[String]("query")
+    pattern = (root / "search") ? param[String]("query")
   )
 
-  private val loginRoute = Route.static(LoginPage, root / "hello" / "login" / endOfSegments)
+  private val loginRoute = Route.static(LoginPage, root / "hello" / "login")
 
-  private val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
+  private val signupRoute = Route.static(SignupPage, root / "signup" / "test")
 
   def makeRouter: Router[AppPage] = {
     // Set initial URL

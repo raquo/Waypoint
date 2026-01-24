@@ -15,9 +15,9 @@ class StaticRouteSpec extends JsUnitSpec {
 
   it("matches simple url") {
 
-    val webHomeRoute = Route.static(HomePage, root / endOfSegments)
-    val loginRoute = Route.static(LoginPage, root / "hello" / "login" / endOfSegments)
-    val signupRoute = Route.static(SignupPage, root / "signup" / "test" / endOfSegments)
+    val webHomeRoute = Route.static(HomePage, root)
+    val loginRoute = Route.static(LoginPage, root / "hello" / "login")
+    val signupRoute = Route.static(SignupPage, root / "signup" / "test")
 
     // Set initial URL
     dom.window.history.pushState(new js.Object, "", "/")

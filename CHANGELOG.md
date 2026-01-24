@@ -4,6 +4,20 @@ Breaking changes in **bold**.
 
 _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / Waypoint development!_
 
+#### master
+
+- Build: Upgrade to Laminar v18.0.0-M1
+
+- **API: `/ endOfSegments` the default behaviour now with URL-DSL v0.7.0.**
+  - **Migration:** To retain existing behaviour, for your segment paths that **don't** end in `/ endOfSegments`, append `/ ignoreRemainingSegments` to the path; and remove `/ endOfSegments` from any segment paths that **do** have it.
+
+- **API: Replace Router.initialUrl constructor param with a by-name currentUrl arg (and more).**
+  - With typical setup, the default value should be used, just as before. `currentUrl` lets you modify the URL seen by Waypoint, e.g. if any cleanup or corrections are needed.
+
+- Fix: Allow using fragment paths after `#` that don't start with '/'. Previously Waypoint would fail to match such URLs. This fix might be needed e.g. to handle Keycloak.js appending `#state=...` to your URLs.
+
+- **Naming: Route.matchRelativeUrl -> matchAbsoluteUrl (it was incorrectly named)**
+
 #### v10.0.0-M1 – Apr 2025
 
 * New: Overload for `router.navigateTo` that accepts `Signal[Page]` instead of `Page`.

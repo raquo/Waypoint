@@ -41,48 +41,48 @@ class BasePathSpec extends UnitSpec {
 
         val homeRoute: Route[HomePage.type, Unit] = Route.staticPartial(
           HomePage,
-          pattern = root / endOfSegments,
+          pattern = root,
           basePath = basePath
         )
 
         val homeRouteTotal: Route.Total[HomePage.type, Unit] = Route.static(
           HomePage,
-          pattern = root / endOfSegments,
+          pattern = root,
           basePath = basePath
         )
 
         val libraryRoute: Route.Total[LibraryPage, Int] = Route(
           encode = _.libraryId,
           decode = arg => LibraryPage(libraryId = arg),
-          pattern = root / "app" / "library" / segment[Int] / endOfSegments,
+          pattern = root / "app" / "library" / segment[Int],
           basePath = basePath
         )
 
         val textRoute: Route[TextPage, String] = Route(
           encode = _.text,
           decode = arg => TextPage(text = arg),
-          pattern = root / "app" / "test" / segment[String] / endOfSegments,
+          pattern = root / "app" / "test" / segment[String],
           basePath = basePath
         )
 
         val noteRoute: Route[NotePage, (Int, Int)] = Route(
           encode = page => (page.libraryId, page.noteId),
           decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
-          pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int] / endOfSegments,
+          pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int],
           basePath = basePath
         )
 
         val searchRoute: Route[SearchPage, String] = Route.onlyQuery(
           encode = page => page.query,
           decode = arg => SearchPage(arg),
-          pattern = (root / "search" / endOfSegments) ? param[String]("query"),
+          pattern = (root / "search") ? param[String]("query"),
           basePath = basePath
         )
 
         val bigLegalRoute: Route[BigLegalPage, FragmentPatternArgs[String, Unit, String]] = Route.withFragment(
           encode = page => FragmentPatternArgs(path = page.page, (), fragment = page.section),
           decode = args => BigLegalPage(page = args.path, section = args.fragment),
-          pattern = (root / "legal" / segment[String] / endOfSegments) withFragment fragment[String],
+          pattern = (root / "legal" / segment[String]) withFragment fragment[String],
           basePath = basePath
         )
 
@@ -95,7 +95,7 @@ class BasePathSpec extends UnitSpec {
           decode = {
             case arg if arg > 100 => DocsPage(NumPage(arg))
           },
-          pattern = root / "docs" / "num" / segment[Int] / endOfSegments,
+          pattern = root / "docs" / "num" / segment[Int],
           basePath = basePath
         )
 
@@ -106,7 +106,7 @@ class BasePathSpec extends UnitSpec {
           decode = {
             case arg if arg < 0 => DocsPage(NumPage(arg))
           },
-          pattern = root / "docs" / "num" / segment[Int] / endOfSegments,
+          pattern = root / "docs" / "num" / segment[Int],
           basePath = basePath
         )
 
@@ -117,7 +117,7 @@ class BasePathSpec extends UnitSpec {
           decode = {
             case arg if arg == 0 => DocsPage(NumPage(arg))
           },
-          pattern = root / "docs" / "zero" / segment[Int] / endOfSegments,
+          pattern = root / "docs" / "zero" / segment[Int],
           basePath = basePath
         )
 
@@ -128,7 +128,7 @@ class BasePathSpec extends UnitSpec {
           decode = {
             case args => DocsPage(ExamplePage(args))
           },
-          pattern = (root / "docs" / "example" / endOfSegments) ? param[String]("name"),
+          pattern = (root / "docs" / "example") ? param[String]("name"),
           basePath = basePath
         )
 
@@ -139,7 +139,7 @@ class BasePathSpec extends UnitSpec {
           decode = {
             case args => DocsPage(ComponentPage(args.path, args.params))
           },
-          pattern = (root / "docs" / "component" / segment[String] / endOfSegments) ? param[String]("group"),
+          pattern = (root / "docs" / "component" / segment[String]) ? param[String]("group"),
           basePath = basePath
         )
 
@@ -295,7 +295,7 @@ class BasePathSpec extends UnitSpec {
           assertTypeError(
             """|Route.staticTotal(
                |  LegalPage("tos"),
-               |  pattern = root / endOfSegments,
+               |  pattern = root,
                |  basePath = "basePath"
                |)
                |""".stripMargin
@@ -306,7 +306,7 @@ class BasePathSpec extends UnitSpec {
           assertTypeError(
             """|Route.staticTotal[AppPage](
                |  HomePage,
-               |  pattern = root / endOfSegments,
+               |  pattern = root,
                |  basePath = "basePath"
                |)
                |""".stripMargin
