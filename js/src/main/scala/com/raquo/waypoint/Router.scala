@@ -341,7 +341,6 @@ class Router[BasePage](
     navigateTo(pageSignal, replaceState = false)
   }
 
-
   // --
 
   private def pageToRouteEvent(

@@ -2,9 +2,6 @@ import com.raquo.buildkit.SourceDownloader
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 import VersionHelper.{versionFmt, fallbackVersion}
 
-// Get Maven releases faster
-resolvers ++= Resolver.sonatypeOssRepos("public")
-
 lazy val preload = taskKey[Unit]("runs Waypoint-specific pre-load tasks")
 
 preload := {
@@ -118,8 +115,6 @@ lazy val releaseSettings = Seq(
   ),
   (Test / publishArtifact) := false,
   pomIncludeRepository := { _ => false },
-  sonatypeCredentialHost := "s01.oss.sonatype.org",
-  sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
 )
 
 val noPublish = Seq(

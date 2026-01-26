@@ -1,14 +1,7 @@
 {
-  "name": "waypoint-test-setup",
+  "name": "test-setup",
   "version": "0.0.1",
-  "description": "",
-  "homepage": "",
-  "author": "",
-  "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "private": true,
   "devDependencies": {
     "jsdom": "^27.4.0"
   }
