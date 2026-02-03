@@ -6,7 +6,7 @@ _You can now [sponsor](https://github.com/sponsors/raquo) Laminar / Airstream / 
 
 #### master
 
-- Build: Upgrade to Laminar v18.0.0-M1
+- Build: Upgrade to Laminar v18.0.0-M2
 
 - **API: `/ endOfSegments` the default behaviour now with URL-DSL v0.7.0.**
   - **Migration:** To retain existing behaviour, for your segment paths that **don't** end in `/ endOfSegments`, append `/ ignoreRemainingSegments` to the path; and remove `/ endOfSegments` from any segment paths that **do** have it.
