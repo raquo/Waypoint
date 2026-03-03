@@ -48,6 +48,9 @@ sealed abstract class Page(val title: String)
 case class UserPage(userId: Int) extends Page("User")
 case object LoginPage extends Page("Login")
 
+// For upickle 3 series an explicit derivation of case objects is required
+// case object LoginPage extends Page derives ReadWriter
+
 implicit val UserPageRW: ReadWriter[UserPage] = macroRW
 implicit val rw: ReadWriter[Page] = macroRW
 
