@@ -31,3 +31,5 @@ jobs:
         uses: sbt/setup-sbt@v1
       - name: Run tests
         run: sbt +test
+      - name: Check tuplez dependency conflict (issue #29)
+        run: sbt tuplezConflictCheck/test
