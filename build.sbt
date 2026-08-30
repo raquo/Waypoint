@@ -47,6 +47,41 @@ lazy val waypoint = crossProject(JSPlatform, JVMPlatform).in(file("."))
 lazy val waypointJS = waypoint.js
 lazy val waypointJVM = waypoint.jvm // #Note the JVM project exists to provide `Route` class to the backend.
 
+// #Note This project is a regression guard for the tuplez artifact conflict in
+// https://github.com/raquo/Waypoint/issues/29 — Airstream and url-dsl each pull
+// a different tuplez facet (`tuplez-full` vs `tuplez-full-light`) that both
+// define `app.tulz.tuplez.Composition`. When their tuplez lineages diverge into
+// incompatible `Composition` classes, a multi-module Scala.js link fails.
+//
+// A single-module runtime test can't detect this (its compile and link
+// classpaths agree, so the linker's chosen `Composition` is always self
+// consistent). Instead we re-link Waypoint's whole test suite with url-dsl's own
+// `tuplez-full-light` excluded, which forces url-dsl's *precompiled* tuplez calls
+// (`Composition.compose` / `Composition.decompose`, exercised by every route) to
+// resolve against the tuplez that Airstream/Laminar bring in. If the two lineages
+// agree it links & passes; if they don't, linking fails with the exact issue #29
+// error. Run via `sbt tuplezConflictCheck/test`.
+lazy val tuplezConflictCheck = project
+  .in(file("target/tuplez-conflict-check"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(commonSettings)
+  .settings(jsSettings)
+  .settings(noPublish)
+  .settings(
+    // Reuse Waypoint's JS sources verbatim so the guard always covers exactly
+    // the url-dsl / Airstream API surface that Waypoint actually uses.
+    Compile / unmanagedSourceDirectories := (waypointJS / Compile / unmanagedSourceDirectories).value,
+    Test / unmanagedSourceDirectories := (waypointJS / Test / unmanagedSourceDirectories).value,
+    // The actual probe: drop url-dsl's bundled tuplez-full-light.
+    libraryDependencies := libraryDependencies.value.map { m =>
+      if (m.organization == "be.doeraene" && m.name.startsWith("url-dsl")) {
+        m.exclude("app.tulz", "tuplez-full-light_sjs1_3")
+      } else {
+        m
+      }
+    }
+  )
+
 
 // -- Settings
 
