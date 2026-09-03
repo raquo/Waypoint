@@ -15,4 +15,4 @@ package-lock.json
 metals.sbt
 .bloop
 
-.downloads
+.buildkit

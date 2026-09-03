@@ -6,7 +6,7 @@ object Versions {
 
   // -- Dependencies --
 
-  val Laminar = "18.0.0-M5"
+  val Laminar = "18.0.0-M6"
 
   //val Airstream = "18.0.0-M5"
 
