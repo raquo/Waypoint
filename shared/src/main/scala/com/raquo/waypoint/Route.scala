@@ -458,7 +458,7 @@ object Route {
     *
     * @see [[ValueOf]] - evidence that `Page` is a singleton type
     */
-  def static[Page: ValueOf: ClassTag](
+  def static[Page: ValueOf: ClassTag]( // #nc we could / should remove ClassTag
     staticPage: Page,
     pattern: PathSegment[Unit, DummyError],
     basePath: String = ""
