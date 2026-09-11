@@ -55,11 +55,14 @@ class ContextRouteBuilderSpec extends UnitSpec {
   def makeRouter: Router[PageBundle] = {
     // Set initial URL
     dom.window.history.pushState(new js.Object, "", "/app/library/700")
-    new Router[PageBundle](
-      routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
-      getPageTitle = _.toString,
+    val codec = new HistoryCodec[PageBundle](
       serializePage = page => write(page)(PageBundle.rw),
       deserializePage = pageStr => read(pageStr)(PageBundle.rw),
+    )
+    new Router[PageBundle](
+      routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
+      codec = codec,
+      getPageTitle = _.toString,
       owner = testOwner
     )
   }

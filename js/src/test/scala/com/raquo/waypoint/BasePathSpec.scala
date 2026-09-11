@@ -146,6 +146,11 @@ class BasePathSpec extends UnitSpec {
         // Set initial URL
         dom.window.history.pushState(new js.Object, "", s"${basePath}/app/library/700")
 
+        val codec = new HistoryCodec[AppPage](
+          serializePage = page => write(page)(AppPage.rw),
+          deserializePage = pageStr => read(pageStr)(AppPage.rw),
+        )
+
         val router = new Router[AppPage](
           routes = List(
             libraryRoute,
@@ -161,9 +166,8 @@ class BasePathSpec extends UnitSpec {
             exampleRoute,
             componentRoute
           ),
+          codec = codec,
           getPageTitle = _.pageTitle,
-          serializePage = page => write(page)(AppPage.rw),
-          deserializePage = pageStr => read(pageStr)(AppPage.rw),
           owner = testOwner,
           origin = origin,
           currentUrl = dom.window.location.href.replace(dom.window.location.origin, origin) // faking origin for testing...

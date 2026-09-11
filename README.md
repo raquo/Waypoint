@@ -60,9 +60,11 @@ val loginRoute = Route.static(LoginPage, root / "login")
 
 object router extends Router[Page](
   routes = List(userRoute, loginRoute),
+  codec = new HistoryCodec[Page](
+    serializePage = page => write(page)(rw), // serialize page data for storage in
+    deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
+  ),
   getPageTitle = page => page.title, // (document title, displayed in the browser history, and in the tab next to favicon)
-  serializePage = page => write(page)(rw), // serialize page data for storage in History API log
-  deserializePage = pageStr => read(pageStr)(rw) // deserialize the above
 )
 ```
 
@@ -358,9 +360,11 @@ By default, Waypoint page transitions don't reset sroll position, however you ca
 ```scala
 object router extends Router[Page](
   routes = ...,
+  codec = new HistoryCodec[Page](
+    serializePage = ...,
+    deserializePage = ...
+  ),
   getPageTitle = ...
-  serializePage = ...,
-  deserializePage = ...
 ) {
   
   currentPageSignal.foreach { page =>

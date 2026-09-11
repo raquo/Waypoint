@@ -22,11 +22,15 @@ class StaticRouteSpec extends JsUnitSpec {
     // Set initial URL
     dom.window.history.pushState(new js.Object, "", "/")
 
-    val router = new Router[AppPage](
-      routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
-      getPageTitle = _.pageTitle,
+    val codec = new HistoryCodec[AppPage](
       serializePage = page => write(page)(AppPage.rw),
       deserializePage = pageStr => read(pageStr)(AppPage.rw),
+    )
+
+    val router = new Router[AppPage](
+      routes = webHomeRoute :: loginRoute :: signupRoute :: Nil,
+      codec = codec,
+      getPageTitle = _.pageTitle,
       owner = testOwner,
     )
 

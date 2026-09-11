@@ -15,26 +15,22 @@ import scala.util.{Failure, Success, Try}
   *                              If none of the routes match the provided URL upon initial page load,
   *                              [[routeFallback]] will be used instead.
   *
-  * @param serializePage       - encode page into a History API state record. Return any string here (JSON string is ok)
-  *                              This is called any time you trigger navigation to a page.
-  *
-  * @param deserializePage     - parse the result of [[serializePage]] back into a page.
-  *                              This is called when user navigates using browser back / forward buttons and we load
-  *                              history state
-  *                              If you throw here, [[deserializeFallback]] will be called instead.
-  *
   * @param routeFallback       - receives URL as input (either initialUrl or on hashChange event) and returns a page
   *                              to render when none of the routes match on initial page load.
   *                              When rendering a fallback page, the URL will stay the same.
   *                              If you want to perform any logic (such as redirects) in case of this fallback,
   *                              put it in the renderer (whatever you have responding to router.\$currentPage).
   *
-  * @param deserializeFallback - receives raw state from History API as input and returns a page to render when
-  *                              the entry in the history can not be deserialized using [[deserializePage]].
-  *                              If you want to perform any logic (such as redirects) in case of this fallback,
-  *                              put it in the renderer (whatever you have responding to router.\$currentPage).
-  *
   * @param popStateEvents      - typically windowEvents(_.onPopState) in Laminar
+  *
+  * @param preventNavigation   - optionally prevent a navigation, e.g. to show a "you have unsaved changes" dialog.
+  *                              For each navigation this callback is invoked and returns an EventStream that should
+  *                              emit one Boolean: `true` to prevent (block) the navigation, `false` to allow it.
+  *                              If the stream never emits, the navigation stays pending (blocked) indefinitely.
+  *                              While such a stream is pending, any other navigation is rejected outright.
+  *                              Note that browser back / forward navigations have already happened by the time
+  *                              Waypoint learns about them (this is how the History API works), so preventing
+  *                              those un-does the navigation internally.
   *
   * @param owner               - typically unsafeWindowOwner in Laminar (if the router should never die, i.e. it's a whole app router)
   *
@@ -44,22 +40,38 @@ import scala.util.{Failure, Success, Try}
   *                              for testing or to virtually clean the URLs that Waypoint sees if something else is
   *                              messing with your URLs (e.g. Keycloak-JS adding malformed query params)
   *
-  * @throws Exception          - when [[initialUrl]] is not absolute or does not match [[origin]]
+  * @throws Exception          - when the initial [[currentUrl]] is not absolute or does not match [[origin]]
   */
 class Router[BasePage](
   routes: List[Route[_ <: BasePage, _]],
-  serializePage: BasePage => String,
-  deserializePage: String => BasePage,
+  codec: HistoryCodec[BasePage],
   getPageTitle: BasePage => String,
   routeFallback: String => BasePage = Router.throwOnUnknownUrl,
-  deserializeFallback: Any => BasePage = Router.throwOnInvalidState,
   popStateEvents: EventStream[dom.PopStateEvent] = windowEvents(_.onPopState),
+  preventNavigation: NavigationEvent[BasePage] => EventStream[Boolean] = (_: NavigationEvent[BasePage]) => EventStream.fromValue(false),
   protected val owner: Owner = unsafeWindowOwner,
   val origin: String = Router.canonicalDocumentOrigin,
   currentUrl: => String = dom.window.location.href
 ) extends Router.All[BasePage] {
 
-  private val routeEventBus = new EventBus[RouteEvent[BasePage]]
+  /** The stamp / sequential index of the history entry that the browser is currently on.
+    * We write this index into every history state record we create so that we can later tell
+    * whether a `popState` event navigated back or forward (by comparing the target entry's
+    * index with this one).
+    */
+  private var navigationIndex: Int = 0
+
+  /** Set when we undo a browser back / forward navigation that was blocked by [[preventNavigation]].
+    * The `history.back()` / `history.forward()` call we use to undo such navigation triggers its own
+    * `popState` event, which we must ignore.
+    */
+  private var suppressNextPopState: Boolean = false
+
+  /** If defined, it means that the previous navigation request is still pending
+    * due to `preventNavigation` not having allowed us to proceed yet.
+    * All other navigation should be rejected until this one resolves.
+    */
+  private var pendingNavigationOpt: Option[NavigationRequest[BasePage]] = None
 
   /** You can force the router to emit a page using `forcePage`.
     * This will not update the URL or create/update a history record.
@@ -67,13 +79,14 @@ class Router[BasePage](
     */
   private val forcePageBus = new EventBus[BasePage]
 
+  private val pageBus = new EventBus[BasePage]
+
   /** Note: this can be in an errored state if:
-    *  - [[initialUrl]] does not match [[origin]]
+    *  - initial [[currentUrl]] does not match [[origin]]
     *  - [[routeFallback]] was invoked and threw an Exception
-    *  - [[deserializeFallback]] was invoked and threw an Exception
+    *  - [[codec.deserializeFallback]] was invoked and threw an Exception
     */
   val currentPageSignal: StrictSignal[BasePage] = {
-    val pageFromRoute = routeEventBus.events.map(_.page)
     val forcedPage = forcePageBus.events.map { page =>
       val pageTitle = getPageTitle(page)
       if (pageTitle.nonEmpty) {
@@ -95,13 +108,15 @@ class Router[BasePage](
         //  - `handlePopState` relies on us replacing the URL on page load as this sets a non-null state
         //  - We deliberately use `forceUrl` to prevent overwriting the URL with the canonical URL for the page
         //    because the original URL might have query params that the matching page does not track
-        val routeEvent = pageToRouteEvent(
-          page,
-          replace = true,
-          fromPopState = false,
-          forceUrl = Utils.makeRelativeUrl(origin, initialUrl)
+        navigationIndex = 0
+        val pageTitle = getPageTitle(page)
+        val relativeUrl = Utils.makeRelativeUrl(origin, initialUrl)
+        dom.window.history.replaceState(
+          statedata = codec.encodeState(navigationIndex, page),
+          title = pageTitle,
+          url = relativeUrl
         )
-        handleRouteEvent(routeEvent)
+        replacePageTitle(pageTitle)
       }
 
       // Note: routeFallback can throw
@@ -109,14 +124,12 @@ class Router[BasePage](
     }
 
     EventStream
-      .merge(pageFromRoute, forcedPage)
+      .merge(pageBus.events, forcedPage)
       .startWithTry(initialPage)
       .observe(owner)
   }
 
   // --
-
-  routeEventBus.events.foreach(handleRouteEvent)(owner)
 
   popStateEvents.foreach(handlePopState)(owner)
 
@@ -182,7 +195,10 @@ class Router[BasePage](
     * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
     */
   def pushState(page: BasePage): Unit = {
-    routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = false, fromPopState = false)))
+    Try(submitNavigation(navigationRequestFromPage(page, replace = false))) match {
+      case Success(_) => ()
+      case Failure(err) => AirstreamError.sendUnhandledError(err)
+    }
   }
 
   /** Replaces state without creating a new history record.
@@ -195,7 +211,10 @@ class Router[BasePage](
     * [[https://developer.mozilla.org/en-US/docs/Web/API/History_API History API @ MDN]]
     */
   def replaceState(page: BasePage): Unit = {
-    routeEventBus.writer.onTry(Try(pageToRouteEvent(page, replace = true, fromPopState = false)))
+    Try(submitNavigation(navigationRequestFromPage(page, replace = true))) match {
+      case Success(_) => ()
+      case Failure(err) => AirstreamError.sendUnhandledError(err)
+    }
   }
 
   /** Replaces just the document title (and updates the current history record with it).
@@ -343,33 +362,18 @@ class Router[BasePage](
 
   // --
 
-  private def pageToRouteEvent(
+  private def navigationRequestFromPage(
     page: BasePage,
-    replace: Boolean,
-    fromPopState: Boolean,
-    forceUrl: String = ""
-  ): RouteEvent[BasePage] = {
-    new RouteEvent(
-      page,
-      stateData = serializePage(page),
+    replace: Boolean
+  ): NavigationRequest[BasePage] = {
+    new NavigationRequest[BasePage](
+      page = page,
+      kind = if (replace) NavigationKind.Replace else NavigationKind.Push,
+      relativeUrl = relativeUrlForPage(page),
       pageTitle = getPageTitle(page),
-      url = if (forceUrl.nonEmpty) forceUrl else relativeUrlForPage(page),
-      replace = replace,
-      fromPopState = fromPopState
+      originIndex = navigationIndex,
+      destinationIndex = if (replace) navigationIndex else navigationIndex + 1
     )
-  }
-
-  private def handleRouteEvent(ev: RouteEvent[BasePage]): Unit = {
-    if (!ev.fromPopState) {
-      if (ev.replace) {
-        dom.window.history.replaceState(statedata = ev.stateData, title = ev.pageTitle, url = ev.url)
-      } else {
-        dom.window.history.pushState(statedata = ev.stateData, title = ev.pageTitle, url = ev.url)
-      }
-    }
-    // 1) Browsers don't currently support the `title` argument in pushState / replaceState
-    // 2) We need to set the title when popping state too
-    replacePageTitle(ev.pageTitle)
   }
 
   /** This method should be added as a listener on window popstate event. Note:
@@ -378,35 +382,177 @@ class Router[BasePage](
     * - this event is not fired for initial page load, or when we call pushState or replaceState
     */
   private def handlePopState(ev: dom.PopStateEvent): Unit = {
-    val routeEvent = (ev.state: Any) match {
-
-      case stateStr: String =>
-        val page = Try(deserializePage(stateStr)).getOrElse(deserializeFallback(ev.state))
-        pageToRouteEvent(page, replace = false, fromPopState = true)
-
-      case null =>
-        // Respond to hashChange events here.
-        // - hashChange events trigger popState events, like navigation
-        // - Unfortunately we can't easily tell which events are coming from hashChange except that ev.state is null
-        // - However, when navigating back to the original, initialUrl, ev.state would also normally be null,
-        //   but that's not a problem for us because we replaceState on page load, and that replaces the original
-        //   history record with one that does have ev.state
-        // - So end result is that we can tell that this here is a hashChange event just by looking at ev.state == null
-        // https://stackoverflow.com/a/33169145/2601788
-        val absoluteUrl = currentUrl
-        val relativeUrl = Utils.makeRelativeUrl(origin, absoluteUrl)
-        val page = pageForAbsoluteUrl(absoluteUrl).getOrElse(routeFallback(absoluteUrl))
-        pageToRouteEvent(page, replace = false, fromPopState = true, forceUrl = relativeUrl)
-
-      case _ =>
-        val fallbackPage = deserializeFallback(ev.state)
-        pageToRouteEvent(fallbackPage, replace = false, fromPopState = true)
+    if (suppressNextPopState) {
+      suppressNextPopState = false
+      return
     }
-    routeEventBus.emit(routeEvent)
+
+    val originIndex = navigationIndex
+
+    // The URL has already updated
+    val relativeUrl = Utils.makeRelativeUrl(origin, currentUrl)
+
+    if (ev.state == null) {
+      // Respond to hashChange events here.
+      // - hashChange events trigger popState events, like navigation
+      // - Unfortunately we can't easily tell which events are coming from hashChange except that ev.state is null
+      // - However, when navigating back to the original, initialUrl, ev.state would also normally be null,
+      //   but that's not a problem for us because we replaceState on page load, and that replaces the original
+      //   history record with one that does have ev.state
+      // - So end result is that we can tell that this here is a hashChange event just by looking at ev.state == null
+      // https://stackoverflow.com/a/33169145/2601788
+      val page = pageForAbsoluteUrl(currentUrl).getOrElse(routeFallback(currentUrl))
+      submitNavigation(new NavigationRequest[BasePage](
+        page = page,
+        kind = NavigationKind.HashChange,
+        relativeUrl = relativeUrl,
+        pageTitle = getPageTitle(page),
+        originIndex = originIndex,
+        destinationIndex = originIndex + 1
+      ))
+    } else {
+      codec.decodeState(ev.state) match {
+        case Some((destinationNavigationIndex, destinationPage)) =>
+          val kind =
+            if (destinationNavigationIndex < originIndex) {
+              NavigationKind.Back
+            } else {
+              NavigationKind.Forward
+            }
+          submitNavigation(new NavigationRequest[BasePage](
+            page = destinationPage,
+            kind = kind,
+            relativeUrl = relativeUrl,
+            pageTitle = getPageTitle(destinationPage),
+            originIndex = originIndex,
+            destinationIndex = destinationNavigationIndex
+          ))
+        case None =>
+          // Malformed history API state. We can't know its position in history,
+          // so we treat it like a hash change: best-effort, assume forward.
+          val page = codec.deserializeFallback(ev.state)
+          submitNavigation(new NavigationRequest[BasePage](
+            page = page,
+            kind = NavigationKind.HashChange, // #TODO[block] Why HashChange?
+            relativeUrl = relativeUrl,
+            pageTitle = getPageTitle(page),
+            originIndex = originIndex,
+            destinationIndex = originIndex + 1
+          ))
+      }
+    }
   }
 
+  private def submitNavigation(pending: NavigationRequest[BasePage]): Unit = {
+    pendingNavigationOpt match {
+      case Some(_) =>
+        // A navigation guard is already pending. Reject this new navigation outright:
+        //  - App-initiated navigations did not even touch the browser history yet, so we just drop them.
+        //  - Browser navigations have already happened, so we undo them immediately (no guard, no render).
+        pending.kind match {
+          case _: NavigationKind.RouterInitiated => ()
+          case _ => revertNavigation(pending)
+        }
+
+      case None =>
+        pendingNavigationOpt = Some(pending)
+
+        // Mirror the browser's actual position while we wait for the guard to resolve.
+        //  - For push / replace, the browser has NOT moved yet, so internalIndex stays put until commit.
+        //  - For pop kinds, the browser has ALREADY moved, so update internalIndex now.
+        if (pending.kind != NavigationKind.Push && pending.kind != NavigationKind.Replace) {
+          navigationIndex = pending.destinationIndex
+        }
+
+        val nav = NavigationEvent[BasePage](
+          fromPage = currentPageSignal.now(),
+          toPage = pending.page,
+          kind = pending.kind,
+          toRelativeUrl = pending.relativeUrl
+        )
+
+        Try(preventNavigation(nav)) match {
+          case Success(stream) =>
+            stream.take(1).foreach(prevent => resolveNavigation(prevent))(owner)
+          case Failure(err) =>
+            AirstreamError.sendUnhandledError(err)
+            resolveNavigation(prevent = false) // fail open
+        }
+    }
+  }
+
+  private def resolveNavigation(prevent: Boolean): Unit = {
+    val pending = pendingNavigationOpt.getOrElse(
+      throw new WaypointException("resolveNavigation does not have a pending navigation")
+    )
+    pendingNavigationOpt = None
+    if (prevent) {
+      revertNavigation(pending)
+    } else {
+      commitNavigation(pending)
+    }
+  }
+
+  private def commitNavigation(pending: NavigationRequest[BasePage]): Unit = {
+    lazy val encodedState =
+      codec.encodeState(pending.destinationIndex, pending.page)
+    pending.kind match {
+      case NavigationKind.Push =>
+        navigationIndex = pending.destinationIndex
+        dom.window.history.pushState(
+          statedata = encodedState,
+          title = pending.pageTitle,
+          url = pending.relativeUrl
+        )
+
+      case NavigationKind.Replace =>
+        navigationIndex = pending.destinationIndex
+        dom.window.history.replaceState(
+          statedata = encodedState,
+          title = pending.pageTitle,
+          url = pending.relativeUrl
+        )
+
+      case NavigationKind.HashChange =>
+        // Re-stamp the browser-created entry so that future back / forward to it can be detected
+        navigationIndex = pending.destinationIndex
+        dom.window.history.replaceState(
+          statedata = encodedState,
+          title = pending.pageTitle,
+          url = pending.relativeUrl
+        )
+
+      case NavigationKind.Back | NavigationKind.Forward =>
+        () // Browser already performed the navigation; internalIndex was already updated when the request arrived.
+    }
+
+    replacePageTitle(pending.pageTitle)
+    pageBus.emit(pending.page)
+  }
+
+  private def revertNavigation(pending: NavigationRequest[BasePage]): Unit = {
+    pending.kind match {
+      case _: NavigationKind.RouterInitiated =>
+        () // We never wrote anything to history, so there is nothing to undo.
+
+      case NavigationKind.Back =>
+        navigationIndex = pending.originIndex
+        suppressNextPopState = true
+        dom.window.history.forward()
+
+      case NavigationKind.Forward | NavigationKind.HashChange =>
+        navigationIndex = pending.originIndex
+        suppressNextPopState = true
+        dom.window.history.back()
+    }
+  }
+
+
+
 }
+
 object Router {
+
   /** The part of router that does not depend on the page type. */
   trait Shared {
     /** @see [[Router.replacePageTitle]] */
@@ -478,14 +624,6 @@ object Router {
 
   private val throwOnUnknownUrl = (url: String) => {
     throw new WaypointException("Unable to parse URL into a Page, it does not match any routes: " + url)
-  }
-
-  /** History State can be any serializable JS value. Could be a string, a plain object, etc.
-    * Waypoint itself uses the result of `serializePage` which is a string.
-    */
-  private val throwOnInvalidState = (state: Any) => {
-    // @TODO `null` is needed to work around https://github.com/lampepfl/dotty/issues/11943, drop it later
-    throw new WaypointException("Unable to deserialize history state: " + JSON.stringify(state.asInstanceOf[js.Any], null))
   }
 
   /** In Firefox, `file://` URLs have "null" (a string) as location.origin instead of "file://" like in Chrome or Safari.
