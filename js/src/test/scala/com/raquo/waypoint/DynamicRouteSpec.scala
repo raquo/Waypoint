@@ -19,7 +19,7 @@ class DynamicRouteSpec extends UnitSpec {
   // #TODO[Test] We use `localhost` instead of example.com because
   // the test framework instantiates JSDOM with this origin, and we
   // currently don't have access to change that.
-  val origin = "http://localhost"
+  private val origin = dom.window.location.origin
 
   val libraryRoute: Route[LibraryPage, Int] = Route(
     encode = _.libraryId,
@@ -124,7 +124,6 @@ class DynamicRouteSpec extends UnitSpec {
     serializePage = page => write(page)(AppPage.rw),
     deserializePage = pageStr => read(pageStr)(AppPage.rw),
     owner = testOwner,
-    origin = origin,
   )
 
   it("segment routes - parse urls - match") {

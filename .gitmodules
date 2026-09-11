@@ -1,0 +1,3 @@
+[submodule "vendor/scala-js-env-selenium"]
+	path = vendor/scala-js-env-selenium
+	url = https://github.com/scala-js/scala-js-env-selenium.git

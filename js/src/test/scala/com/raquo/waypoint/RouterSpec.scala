@@ -13,6 +13,8 @@ class RouterSpec extends UnitSpec {
 
   private val testOwner = new Owner {}
 
+  private val origin = dom.window.location.origin
+
   private val libraryRoute = Route[LibraryPage, Int](
     encode = _.libraryId,
     decode = arg => LibraryPage(libraryId = arg),
@@ -51,11 +53,12 @@ class RouterSpec extends UnitSpec {
       serializePage = page => write(page)(AppPage.rw),
       deserializePage = pageStr => read(pageStr)(AppPage.rw),
       owner = testOwner,
-      origin = "http://localhost",
     )
   }
 
   it("basic history operation") {
+
+    assert(origin == "http://localhost:8873")
 
     // @Note jsdom is kinda limited
 
@@ -67,14 +70,14 @@ class RouterSpec extends UnitSpec {
 
     router.pushState(LoginPage)
 
-    dom.document.location.href shouldBe "http://localhost/hello/login"
+    dom.document.location.href shouldBe s"$origin/hello/login"
     router.currentPageSignal.now() shouldBe LoginPage
 
     // --
 
     router.replaceState(LibraryPage(100))
 
-    dom.document.location.href shouldBe "http://localhost/app/library/100"
+    dom.document.location.href shouldBe s"$origin/app/library/100"
     router.currentPageSignal.now() shouldBe LibraryPage(100)
   }
 

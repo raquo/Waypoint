@@ -16,4 +16,4 @@ addSbtPlugin("com.raquo" % "sbt-buildkit-scalajs" % "0.2.0-M1")
 
 addSbtPlugin("com.raquo" % "sbt-buildkit-dynver" % "0.2.0-M1")
 
-libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.1.1"
+// libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.1.1"

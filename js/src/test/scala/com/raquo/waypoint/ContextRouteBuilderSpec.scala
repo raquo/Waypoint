@@ -60,8 +60,7 @@ class ContextRouteBuilderSpec extends UnitSpec {
       getPageTitle = _.toString,
       serializePage = page => write(page)(PageBundle.rw),
       deserializePage = pageStr => read(pageStr)(PageBundle.rw),
-      owner = testOwner,
-      origin = "http://localhost", // dom.window.location.origin.get
+      owner = testOwner
     )
   }
 

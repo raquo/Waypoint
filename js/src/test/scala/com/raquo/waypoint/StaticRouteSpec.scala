@@ -28,8 +28,6 @@ class StaticRouteSpec extends JsUnitSpec {
       serializePage = page => write(page)(AppPage.rw),
       deserializePage = pageStr => read(pageStr)(AppPage.rw),
       owner = testOwner,
-      origin = "http://localhost:8080",
-      currentUrl = dom.window.location.href.replace("http://localhost", "http://localhost:8080") // fake origin for testing...
     )
 
     expectPageRelative(router, "/hello/login", Some(LoginPage))

@@ -166,7 +166,7 @@ class BasePathSpec extends UnitSpec {
           deserializePage = pageStr => read(pageStr)(AppPage.rw),
           owner = testOwner,
           origin = origin,
-          currentUrl = dom.window.location.href.replace("http://localhost", origin) // faking origin for testing...
+          currentUrl = dom.window.location.href.replace(dom.window.location.origin, origin) // faking origin for testing...
         )
 
         it("segment routes - parse urls - match") {
