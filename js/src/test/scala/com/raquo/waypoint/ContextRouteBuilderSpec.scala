@@ -1,9 +1,7 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.core.Observer
-import com.raquo.airstream.ownership.Owner
-import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.{AppPage, PerTestOwner, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.context.{PageBundle, SharedParams}
 import org.scalajs.dom
@@ -11,9 +9,9 @@ import upickle.default._
 
 import scala.scalajs.js
 
-class ContextRouteBuilderSpec extends UnitSpec {
-
-  private val testOwner = new Owner {}
+class ContextRouteBuilderSpec
+extends UnitSpec
+with PerTestOwner {
 
   val RouteWithContext = new ContextRouteBuilder[PageBundle, AppPage, SharedParams, (Option[String], Option[String])](
     encodeContext = c => (c.version, c.lang),

@@ -1,260 +1,166 @@
 package com.raquo.waypoint
 
-import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api.L._
-import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage._
-import org.scalajs.dom
-import upickle.default._
+import com.raquo.waypoint.fixtures.{AppPage, AppRouterFixture, HistoryProbe, UnitSpec}
 
-import scala.scalajs.js
+/** Tests of router-initiated navigation (`pushState` / `replaceState`), and of the
+  * `preventNavigation` guard as it applies to them.
+  *
+  * These run against the real History API of a real browser (see `jsEnv` in build.sbt). They can
+  * stay synchronous because a router-initiated navigation is applied synchronously, as long as
+  * the guard resolves synchronously too.
+  *
+  * Browser-initiated navigation (Back / Forward / hash changes) is inherently asynchronous — the
+  * browser delivers the `popstate` event on a later task — and is covered by
+  * [[BrowserNavigationSpec]].
+  */
+class RouterSpec extends UnitSpec with AppRouterFixture {
 
-class RouterSpec extends UnitSpec {
+  it("pushState and replaceState update the page, the URL, and the stamped history entry") {
 
-  private val testOwner = new Owner {}
-
-  private val libraryRoute = Route[LibraryPage, Int](
-    encode = _.libraryId,
-    decode = arg => LibraryPage(libraryId = arg),
-    pattern = root / "app" / "library" / segment[Int]
-  )
-
-  private val textRoute = Route[TextPage, String](
-    encode = _.text,
-    decode = arg => TextPage(text = arg),
-    pattern = root / "app" / "test" / segment[String]
-  )
-
-  private val noteRoute = Route[NotePage, (Int, Int)](
-    encode = page => (page.libraryId, page.noteId),
-    decode = args => NotePage(libraryId = args._1, noteId = args._2, scrollPosition = 0),
-    pattern = root / "app" / "library" / segment[Int] / "note" / segment[Int]
-  )
-
-  private val searchRoute = Route.onlyQuery[SearchPage, String](
-    encode = page => page.query,
-    decode = arg => SearchPage(arg),
-    pattern = (root / "search") ? param[String]("query")
-  )
-
-  private val loginRoute = Route.static(LoginPage, root / "hello" / "login")
-
-  private val signupRoute = Route.static(SignupPage, root / "signup" / "test")
-
-  // Real origin of the test page (e.g. under Selenium this includes the
-  // materialization server's port, whereas jsdom defaults to no port).
-  private val origin = dom.window.location.origin
-
-  def makeRouter(
-    preventNavigation: NavigationEvent[AppPage] => EventStream[Boolean] = (_: NavigationEvent[AppPage]) => EventStream.fromValue(false),
-    popStateEvents: EventStream[dom.PopStateEvent] = windowEvents(_.onPopState)
-  ): Router[AppPage] = {
-    // Set initial URL
-    dom.window.history.pushState(new js.Object, "", "/app/library/700")
-
-    val codec = new HistoryCodec[AppPage](
-      serializePage = page => write(page)(AppPage.rw),
-      deserializePage = pageStr => read(pageStr)(AppPage.rw),
-    )
-
-    new Router[AppPage](
-      routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,
-      codec = codec,
-      getPageTitle = _.toString,
-      preventNavigation = preventNavigation,
-      popStateEvents = popStateEvents,
-      owner = testOwner
-    )
-  }
-
-  private def popState(state: js.Any): dom.PopStateEvent = {
-    js.Dynamic.literal("type" -> "popstate", "state" -> state).asInstanceOf[dom.PopStateEvent]
-  }
-
-  private def stampedState(idx: Int, page: AppPage): String = s"$idx|${write(page)(AppPage.rw)}"
-
-  /** Overrides `history.back` / `history.forward` recording call counts, returns a way to read them. */
-  private def spyOnHistory(): (() => Int, () => Int, () => Unit) = {
-    val history = dom.window.history.asInstanceOf[js.Dynamic]
-    val origForward = history.selectDynamic("forward")
-    val origBack = history.selectDynamic("back")
-
-    var forwardCalls = 0
-    var backCalls = 0
-
-    history.updateDynamic("forward")((() => { forwardCalls += 1 }): js.Function0[Unit])
-    history.updateDynamic("back")((() => { backCalls += 1 }): js.Function0[Unit])
-
-    (
-      () => forwardCalls,
-      () => backCalls,
-      () => {
-        history.updateDynamic("forward")(origForward)
-        history.updateDynamic("back")(origBack)
-      }
-    )
-  }
-
-  it("basic history operation") {
-
-    assert(origin == "http://localhost:8873") // selenium
-
-    // @Note jsdom is kinda limited
+    // The Selenium jsEnv serves the test bundle over http:// on a port assigned at runtime.
+    // On a file:// origin every History API call in this suite would throw instead.
+    origin should startWith("http://localhost:")
 
     val router = makeRouter()
+    val entriesBefore = HistoryProbe.length
 
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
-
-    // --
+    expectCurrent(router, LibraryPage(700), "/app/library/700", navigationIndex = 0)
 
     router.pushState(LoginPage)
 
-    dom.document.location.href shouldBe s"$origin/hello/login"
-    router.currentPageSignal.now() shouldBe LoginPage
-
-    // --
+    expectCurrent(router, LoginPage, "/hello/login", navigationIndex = 1)
+    HistoryProbe.length shouldBe (entriesBefore + 1) // pushState creates a history entry
 
     router.replaceState(LibraryPage(100))
 
-    dom.document.location.href shouldBe s"$origin/app/library/100"
-    router.currentPageSignal.now() shouldBe LibraryPage(100)
+    expectCurrent(router, LibraryPage(100), "/app/library/100", navigationIndex = 1)
+    HistoryProbe.length shouldBe (entriesBefore + 1) // replaceState does not, and keeps the index
   }
 
-  it("async guard defers navigation until it resolves (allow)") {
+  it("an async guard defers a navigation until it resolves, and then commits it") {
 
     val guardBus = new EventBus[Boolean]
     val router = makeRouter(preventNavigation = _ => guardBus.events)
-
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
+    val entriesBefore = HistoryProbe.length
 
     router.pushState(LoginPage)
 
-    // Guard has not resolved yet, so navigation is still pending
-    dom.document.location.href shouldBe s"$origin/app/library/700"
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
+    // Nothing has happened yet: not the page, not the URL, and — importantly — not the history
+    // entry. A router-initiated navigation must not touch history until the guard allows it.
+    expectCurrent(router, LibraryPage(700), "/app/library/700", navigationIndex = 0)
+    HistoryProbe.length shouldBe entriesBefore
 
     guardBus.emit(false) // allow
 
-    dom.document.location.href shouldBe s"$origin/hello/login"
-    router.currentPageSignal.now() shouldBe LoginPage
+    expectCurrent(router, LoginPage, "/hello/login", navigationIndex = 1)
+    HistoryProbe.length shouldBe (entriesBefore + 1)
+
+    // The router is not left in a pending state: the next navigation is deferred to the guard
+    // in exactly the same way.
+    router.pushState(SignupPage)
+
+    expectCurrent(router, LoginPage, "/hello/login", navigationIndex = 1)
+
+    guardBus.emit(false)
+
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 2)
   }
 
-  it("guard can prevent pushState") {
-
-    val router = makeRouter(preventNavigation = _ => EventStream.fromValue(true))
-
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
-
-    router.pushState(LoginPage)
-
-    dom.document.location.href shouldBe s"$origin/app/library/700"
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
-  }
-
-  it("guard can prevent replaceState") {
-
-    val router = makeRouter(preventNavigation = _ => EventStream.fromValue(true))
-
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
-
-    router.replaceState(LoginPage)
-
-    dom.document.location.href shouldBe s"$origin/app/library/700"
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
-  }
-
-  it("rejects other navigations while a guard is pending") {
+  it("an async guard that prevents a navigation does not block the navigations that follow it") {
 
     val guardBus = new EventBus[Boolean]
     val router = makeRouter(preventNavigation = _ => guardBus.events)
+    val entriesBefore = HistoryProbe.length
+
+    router.pushState(LoginPage)
+    guardBus.emit(true) // prevent
+
+    expectCurrent(router, LibraryPage(700), "/app/library/700", navigationIndex = 0)
+    HistoryProbe.length shouldBe entriesBefore
+
+    // The pending flag was released, so the next navigation is processed normally...
+    router.pushState(SignupPage)
+    guardBus.emit(false) // allow
+
+    // ...and it takes index 1, i.e. the prevented navigation did not consume an index.
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 1)
+    HistoryProbe.length shouldBe (entriesBefore + 1)
+  }
+
+  it("a guard can prevent pushState conditionally, letting other navigations through") {
+
+    val router = makeRouter(preventNavigation = ev => EventStream.fromValue(ev.toPage == LoginPage))
+    val entriesBefore = HistoryProbe.length
+
+    router.pushState(LoginPage) // prevented
+
+    expectCurrent(router, LibraryPage(700), "/app/library/700", navigationIndex = 0)
+    HistoryProbe.length shouldBe entriesBefore
+
+    router.pushState(SignupPage) // allowed
+
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 1)
+    HistoryProbe.length shouldBe (entriesBefore + 1)
+
+    router.pushState(LoginPage) // prevented again, this time from a different page
+
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 1)
+    HistoryProbe.length shouldBe (entriesBefore + 1)
+
+    router.pushState(LibraryPage(100)) // still allowed
+
+    expectCurrent(router, LibraryPage(100), "/app/library/100", navigationIndex = 2)
+  }
+
+  it("a guard can prevent replaceState conditionally, leaving the current history entry intact") {
+
+    val router = makeRouter(preventNavigation = ev => EventStream.fromValue(ev.toPage == LoginPage))
+    val entriesBefore = HistoryProbe.length
+
+    router.replaceState(LoginPage) // prevented
+
+    // A prevented replaceState must not have overwritten the entry we are standing on.
+    expectCurrent(router, LibraryPage(700), "/app/library/700", navigationIndex = 0)
+    HistoryProbe.length shouldBe entriesBefore
+
+    router.replaceState(SignupPage) // allowed
+
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 0) // replace keeps the index
+    HistoryProbe.length shouldBe entriesBefore
+
+    router.pushState(LoginPage) // prevented
+
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 0)
+    HistoryProbe.length shouldBe entriesBefore
+  }
+
+  it("rejects navigations requested while a guard is pending, without leaving a trace of them") {
+
+    val guardBus = new EventBus[Boolean]
+    var guardedPages = List.empty[AppPage]
+    val router = makeRouter(preventNavigation = { ev =>
+      guardedPages = guardedPages :+ ev.toPage
+      guardBus.events
+    })
 
     router.pushState(LoginPage) // pending
-    router.pushState(SignupPage) // rejected while pending
+    router.pushState(SignupPage) // rejected outright while the first one is pending
 
-    guardBus.emit(false) // allow first navigation
+    guardedPages shouldBe List(LoginPage) // the rejected navigation never reached the guard
 
-    dom.document.location.href shouldBe s"$origin/hello/login"
-    router.currentPageSignal.now() shouldBe LoginPage
+    guardBus.emit(false) // allow the first navigation
+
+    expectCurrent(router, LoginPage, "/hello/login", navigationIndex = 1)
+
+    // The rejected navigation is gone for good: it was dropped, not queued up behind the first.
+    guardedPages shouldBe List(LoginPage)
+
+    router.pushState(SignupPage)
+    guardBus.emit(false)
+
+    guardedPages shouldBe List(LoginPage, SignupPage)
+    expectCurrent(router, SignupPage, "/signup/test", navigationIndex = 2)
   }
-
-  it("prevents a back navigation and undoes it with history.forward") {
-
-    val popStateBus = new EventBus[dom.PopStateEvent]
-    var prevent = false
-    val router = makeRouter(
-      preventNavigation = _ => EventStream.fromValue(prevent),
-      popStateEvents = popStateBus.events
-    )
-
-    router.pushState(LoginPage) // idx 1
-    router.pushState(SignupPage) // idx 2, current: SignupPage
-
-    prevent = true
-    val (forwardCalls, backCalls, restore) = spyOnHistory()
-
-    try {
-      popStateBus.emit(popState(stampedState(idx = 1, page = LoginPage))) // back
-
-      forwardCalls() shouldBe 1
-      backCalls() shouldBe 0
-      router.currentPageSignal.now() shouldBe SignupPage
-      dom.document.location.href shouldBe s"$origin/signup/test"
-    } finally {
-      restore()
-    }
-  }
-
-  it("prevents a forward navigation and undoes it with history.back") {
-
-    val popStateBus = new EventBus[dom.PopStateEvent]
-    var prevent = false
-    val router = makeRouter(
-      preventNavigation = _ => EventStream.fromValue(prevent),
-      popStateEvents = popStateBus.events
-    )
-
-    router.pushState(LoginPage) // idx 1
-    router.pushState(SignupPage) // idx 2
-
-    // Simulate back navigation (allowed), landing on LoginPage
-    popStateBus.emit(popState(stampedState(idx = 1, page = LoginPage)))
-    router.currentPageSignal.now() shouldBe LoginPage
-
-    prevent = true
-    val (forwardCalls, backCalls, restore) = spyOnHistory()
-
-    try {
-      popStateBus.emit(popState(stampedState(idx = 2, page = SignupPage))) // forward
-
-      forwardCalls() shouldBe 0
-      backCalls() shouldBe 1
-      router.currentPageSignal.now() shouldBe LoginPage
-    } finally {
-      restore()
-    }
-  }
-
-  it("prevents a hash change and undoes it with history.back") {
-
-    val popStateBus = new EventBus[dom.PopStateEvent]
-    val router = makeRouter(
-      preventNavigation = _ => EventStream.fromValue(true),
-      popStateEvents = popStateBus.events
-    )
-
-    router.currentPageSignal.now() shouldBe LibraryPage(700)
-
-    val (forwardCalls, backCalls, restore) = spyOnHistory()
-
-    try {
-      popStateBus.emit(popState(null)) // hash change (null state)
-
-      forwardCalls() shouldBe 0
-      backCalls() shouldBe 1
-      router.currentPageSignal.now() shouldBe LibraryPage(700)
-    } finally {
-      restore()
-    }
-  }
-
 }
