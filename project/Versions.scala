@@ -2,7 +2,7 @@ object Versions {
 
   val Scala_2_13 = "2.13.18"
 
-  val Scala_3 = "3.3.8"
+  val Scala_3 = "3.9.0"
 
   // -- Dependencies --
 
