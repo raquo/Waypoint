@@ -1,5 +1,3 @@
-import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-import org.scalajs.jsenv.selenium.SeleniumJSEnv
 import sbtcrossproject.CrossPlugin.autoImport.crossProject
 
 ThisBuild / buildKitDownloads := Seq(
@@ -53,48 +51,6 @@ lazy val commonSettings = releaseSettings ++ Seq(
   )
 )
 
-// Test bundles must be served over http://, not file://: Chrome refuses
-// History API calls (pushState / replaceState) on file:// origins, which
-// SeleniumJSEnv's default (temp-file) materialization would use.
-lazy val seleniumMaterializeDir = {
-  val d = file("js/target/selenium-materialize").getAbsoluteFile
-  sbt.io.IO.createDirectory(d)
-  d
-}
-
-// Note: Evaluating this val starts the server.
-// Port 0 => the OS assigns a free port to avoid conflicts with multiple sessions.
-lazy val seleniumHttpServer = {
-  import com.sun.net.httpserver.SimpleFileServer
-  val server = SimpleFileServer.createFileServer(
-    new java.net.InetSocketAddress("localhost", 0),
-    seleniumMaterializeDir.toPath,
-    SimpleFileServer.OutputLevel.NONE
-  )
-  server.start()
-  server
-}
-
-// Note: Evaluating this val starts the server.
-lazy val seleniumMaterializeUrl = s"http://localhost:${seleniumHttpServer.getAddress.getPort}/"
-
-// Silence specific Selenium Chrome DevTools Protocol warnings we don't care about
-lazy val silencedSeleniumLoggers: Seq[java.util.logging.Logger] = {
-  val cdpVersionWarningFilter: java.util.logging.Filter = { record =>
-    val msg = record.getMessage
-    msg == null || !(
-      msg.startsWith("Unable to find CDP implementation matching") ||
-        msg.startsWith("Unable to find version of CDP to use for")
-    )
-  }
-  val loggers = Seq(
-    java.util.logging.Logger.getLogger("org.openqa.selenium.devtools.CdpVersionFinder"),
-    java.util.logging.Logger.getLogger("org.openqa.selenium.chromium.ChromiumDriver")
-  )
-  loggers.foreach(_.setFilter(cdpVersionWarningFilter))
-  loggers
-}
-
 lazy val jsSettings = Seq(
   libraryDependencies ++= Seq(
     "org.scala-js" %%% "scalajs-dom" % Versions.ScalaJsDom,
@@ -103,28 +59,7 @@ lazy val jsSettings = Seq(
   ),
   scalacOptions += pointScalaJsSourceMapsToGithub("raquo/Waypoint").value,
   Test / parallelExecution := false,
-  jsEnv := {
-    val _ = silencedSeleniumLoggers
-    val materializeUrl = seleniumMaterializeUrl // starts the server, memoized for the sbt session
-    new SeleniumJSEnv(
-      driverFactory = {
-        () =>
-          new ChromeDriver(
-            new ChromeOptions().addArguments(
-              "--headless=new",
-              "--no-sandbox",
-              "--disable-dev-shm-usage"
-            )
-          )
-      },
-      config = {
-        SeleniumJSEnv.Config().withMaterializeInServer(
-          seleniumMaterializeDir.getPath,
-          materializeUrl
-        )
-      }
-    )
-  },
+  jsEnv := Selenium.jsEnv,
 )
 
 // -- Release config
