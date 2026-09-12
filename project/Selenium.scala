@@ -1,6 +1,6 @@
-import org.scalajs.jsenv.selenium.SeleniumJSEnv
 import com.sun.net.httpserver.SimpleFileServer
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
+import org.scalajs.jsenv.selenium.SeleniumJSEnv
 
 object Selenium {
 
@@ -49,7 +49,7 @@ object Selenium {
       msg == null || !(
         msg.startsWith("Unable to find CDP implementation matching") ||
           msg.startsWith("Unable to find version of CDP to use for")
-        )
+      )
     }
     val loggers = Seq(
       java.util.logging.Logger.getLogger("org.openqa.selenium.devtools.CdpVersionFinder"),
@@ -73,6 +73,8 @@ object Selenium {
     )
     java.lang.Runtime.getRuntime.addShutdownHook(new Thread("waypoint-quit-chromedrivers") {
       override def run(): Unit = {
+        // First, quit the drivers we managed to fully construct. This closes their
+        // browsers gracefully (temp profiles cleaned up, etc.).
         val it = liveDrivers.iterator()
         while (it.hasNext) {
           try {
@@ -80,6 +82,34 @@ object Selenium {
           } catch {
             case _: Throwable => ()
           }
+        }
+        // Backstop: a driver whose `new ChromeDriver(...)` was interrupted mid-handshake
+        // (e.g. the JVM is signalled during the ~1-3s driver startup) spawned a chromedriver
+        // process and possibly a headless Chrome, but was never added to liveDrivers, so the
+        // graceful quit above misses it. While this hook runs the JVM has not exited yet, so
+        // those processes are still our descendants (they only reparent to PID 1 once we're
+        // gone). Force-kill any chromedriver / headless-Chrome descendant that is still alive.
+        // Scoped to our own process subtree, so it can never touch another sbt session's driver.
+        try {
+          // descendants() is a snapshot taken now, covering children AND grandchildren
+          // (chromedriver plus the headless Chrome it launched), so killing a chromedriver
+          // first never drops a Chrome handle we still need — they are all already captured.
+          java.lang.ProcessHandle.current().descendants().forEach { ph =>
+            val cmd = { val c = ph.info().command(); if (c.isPresent) c.get() else "" }
+            val line = { val c = ph.info().commandLine(); if (c.isPresent) c.get() else "" }
+            val isChromeStack =
+              cmd.contains("chromedriver") || line.contains("chromedriver") ||
+                line.contains("--test-type=webdriver")
+            if (isChromeStack && ph.isAlive) {
+              try {
+                ph.destroyForcibly()
+              } catch {
+                case _: Throwable => ()
+              }
+            }
+          }
+        } catch {
+          case _: Throwable => ()
         }
       }
     })
