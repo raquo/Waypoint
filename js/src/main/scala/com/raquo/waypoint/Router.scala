@@ -1,6 +1,7 @@
 package com.raquo.waypoint
 
 import com.raquo.laminar.api.L._
+import com.raquo.waypoint.navigation.{NavigationKind, NavigationRequest, PendingNavigation, UndoExpectation}
 import org.scalajs.dom
 
 import scala.scalajs.js
@@ -27,7 +28,12 @@ import scala.util.{Failure, Success, Try}
   *                              For each navigation this callback is invoked and returns an EventStream that should
   *                              emit one Boolean: `true` to prevent (block) the navigation, `false` to allow it.
   *                              If the stream never emits, the navigation stays pending (blocked) indefinitely.
-  *                              While such a stream is pending, any other navigation is rejected outright.
+  *                              If another navigation is requested while this stream is still pending, the new
+  *                              navigation supersedes the pending one: the pending navigation is abandoned, this
+  *                              stream is unsubscribed from (so that a guard which puts a confirmation dialog on
+  *                              screen when started can take it down again when stopped), and the guard is asked
+  *                              afresh about the new navigation. An answer that arrives from an abandoned stream
+  *                              after that point is ignored.
   *                              Note that browser back / forward navigations have already happened by the time
   *                              Waypoint learns about them (this is how the History API works), so preventing
   *                              those un-does the navigation internally.
@@ -43,7 +49,7 @@ import scala.util.{Failure, Success, Try}
   * @throws Exception          - when the initial [[currentUrl]] is not absolute or does not match [[origin]]
   */
 class Router[BasePage](
-  routes: List[Route[_ <: BasePage, _]],
+  routes: List[Route[? <: BasePage, ?]],
   codec: HistoryCodec[BasePage],
   getPageTitle: BasePage => String,
   routeFallback: String => BasePage = Router.throwOnUnknownUrl,
@@ -54,24 +60,55 @@ class Router[BasePage](
   currentUrl: => String = dom.window.location.href
 ) extends Router.All[BasePage] {
 
-  /** The stamp / sequential index of the history entry that the browser is currently on.
-    * We write this index into every history state record we create so that we can later tell
-    * whether a `popState` event navigated back or forward (by comparing the target entry's
-    * index with this one).
+  /** Sequential index of the history entry the app has navigated to — the entry whose page we
+    * render. Stamped into every history state record we write, so a `popState` can be told to be
+    * a back or a forward by comparing the target entry's index with this one. Nothing else can:
+    * two adjacent entries can share a URL.
+    *
+    * Tracks the *committed* position, not the browser's current one. The browser moves
+    * before it tells us (a `popState` arrives after the fact), and we may refuse to follow, so
+    * during a pending or prevented navigation the two disagree. Holding this still until a
+    * navigation commits is what lets [[restoreCommittedEntry]] know where to return to, however
+    * far the browser has wandered.
     */
-  private var navigationIndex: Int = 0
+  private var committedIndex: Int = 0
 
-  /** Set when we undo a browser back / forward navigation that was blocked by [[preventNavigation]].
-    * The `history.back()` / `history.forward()` call we use to undo such navigation triggers its own
-    * `popState` event, which we must ignore.
+  /** Index of the history entry the browser is on, as opposed to the one the app is on
+    * ([[committedIndex]]). They differ whenever the browser has moved and we have not followed:
+    * while a guard is deciding about a Back, and after, if we decided against it, until the undo
+    * traversal lands.
+    *
+    * Remembered rather than looked up. `history.state` describes the entry the browser is on, but
+    * only the one it is on *right now*, which during a `popState` need not be the entry that event
+    * is about: the browser processes queued traversals faster than it delivers their events, so
+    * `history.state` can be one or more entries ahead of `ev.state`. Measured in Chrome, with two
+    * Backs pressed in quick succession.
     */
-  private var suppressNextPopState: Boolean = false
+  private var browserIndex: Int = 0
 
-  /** If defined, it means that the previous navigation request is still pending
-    * due to `preventNavigation` not having allowed us to proceed yet.
-    * All other navigation should be rejected until this one resolves.
+  /** Set while an undo of a prevented browser navigation is in flight.
+    *
+    * The undo moves the browser, firing a `popState` we must ignore — else we would read our own
+    * undo as a fresh user navigation the other way, prevent that too, and undo the undo forever.
+    *
+    * It records *where the undo is meant to land*, rather than just "ignore the next `popState`".
+    * A bare flag would be wrong both ways: a user navigation can arrive before our undo (two quick
+    * Back presses) and wrongly consume it, and the browser may not deliver a `popState` for our
+    * own traversal at all (it can coalesce it with a pending one), leaving the flag to ambush a
+    * later real event.
     */
-  private var pendingNavigationOpt: Option[NavigationRequest[BasePage]] = None
+  private var pendingUndoOpt: Option[UndoExpectation] = None
+
+  /** Relative URL of the entry [[committedIndex]] refers to. Only needed to recognize an undo that
+    * lands on an entry carrying no state of ours — which happens when the app started on a URL
+    * that matched no route, so we never stamped the initial entry.
+    */
+  private var committedRelativeUrl: String = ""
+
+  /** If defined, a navigation request is still pending because `preventNavigation` has not
+    * answered about it yet. A navigation requested while it is pending supersedes it.
+    */
+  private var pendingNavigationOpt: Option[PendingNavigation[BasePage]] = None
 
   /** You can force the router to emit a page using `forcePage`.
     * This will not update the URL or create/update a history record.
@@ -103,18 +140,22 @@ class Router[BasePage](
 
       val maybeInitialRoutePage = pageForAbsoluteUrl(initialUrl)
 
+      // Where we start out, matched or not: an unmatched initial URL leaves the entry unstamped,
+      // and this is then the only way to recognize it again.
+      committedRelativeUrl = Utils.makeRelativeUrl(origin, initialUrl)
+
       maybeInitialRoutePage.foreach { page =>
         // #Note
         //  - `handlePopState` relies on us replacing the URL on page load as this sets a non-null state
         //  - We deliberately use `forceUrl` to prevent overwriting the URL with the canonical URL for the page
         //    because the original URL might have query params that the matching page does not track
-        navigationIndex = 0
+        committedIndex = 0
+        browserIndex = 0
         val pageTitle = getPageTitle(page)
-        val relativeUrl = Utils.makeRelativeUrl(origin, initialUrl)
         dom.window.history.replaceState(
-          statedata = codec.encodeState(navigationIndex, page),
+          statedata = codec.encodeState(committedIndex, page),
           title = pageTitle,
-          url = relativeUrl
+          url = committedRelativeUrl
         )
         replacePageTitle(pageTitle)
       }
@@ -126,12 +167,12 @@ class Router[BasePage](
     EventStream
       .merge(pageBus.events, forcedPage)
       .startWithTry(initialPage)
-      .observe(owner)
+      .observe(using owner)
   }
 
   // --
 
-  popStateEvents.foreach(handlePopState)(owner)
+  popStateEvents.foreach(handlePopState)(using owner)
 
   // --
 
@@ -371,8 +412,11 @@ class Router[BasePage](
       kind = if (replace) NavigationKind.Replace else NavigationKind.Push,
       relativeUrl = relativeUrlForPage(page),
       pageTitle = getPageTitle(page),
-      originIndex = navigationIndex,
-      destinationIndex = if (replace) navigationIndex else navigationIndex + 1
+      // #Note Built on where the *browser* is, not where the app is. Normally the same entry;
+      //  not when this navigation supersedes a still-pending browser navigation: `pushState`
+      //  appends after the entry the browser stands on, so that entry is what the new one
+      //  follows, and what its index must follow too.
+      destinationIndex = if (replace) browserIndex else browserIndex + 1
     )
   }
 
@@ -382,15 +426,27 @@ class Router[BasePage](
     * - this event is not fired for initial page load, or when we call pushState or replaceState
     */
   private def handlePopState(ev: dom.PopStateEvent): Unit = {
-    if (suppressNextPopState) {
-      suppressNextPopState = false
+    // The browser has already moved, so the URL and `ev.state` describe where it now is.
+    val relativeUrl = Utils.makeRelativeUrl(origin, currentUrl)
+
+    // Is this the `popState` fired by an undo of ours, not a navigation by the user? We check
+    // where the browser landed, not just whether an undo is outstanding: a user navigation can
+    // arrive before our undo's event and must not be mistaken for it.
+    if (pendingUndoOpt.exists(_.matches(codec.decodeIndex(ev.state), relativeUrl))) {
+      pendingUndoOpt = None
+      browserIndex = committedIndex
       return
     }
 
-    val originIndex = navigationIndex
+    // Where the app is. The guard is asked about a move away from *this* entry, so this decides
+    // whether the browser went back or forward as far as the app is concerned.
+    val originIndex = committedIndex
 
-    // The URL has already updated
-    val relativeUrl = Utils.makeRelativeUrl(origin, currentUrl)
+    // Where the browser stood before this navigation. An entry carrying no index of ours gives
+    // us nothing to place it by, so we assume the browser appended it right where it stood — as
+    // a hash change does. This is the browser's position, not the app's: the same entry unless
+    // this navigation arrives on top of another still waiting on the guard.
+    val browserOriginIndex = browserIndex
 
     if (ev.state == null) {
       // Respond to hashChange events here.
@@ -402,13 +458,12 @@ class Router[BasePage](
       // - So end result is that we can tell that this here is a hashChange event just by looking at ev.state == null
       // https://stackoverflow.com/a/33169145/2601788
       val page = pageForAbsoluteUrl(currentUrl).getOrElse(routeFallback(currentUrl))
-      submitNavigation(new NavigationRequest[BasePage](
+      submitBrowserNavigation(new NavigationRequest[BasePage](
         page = page,
         kind = NavigationKind.HashChange,
         relativeUrl = relativeUrl,
         pageTitle = getPageTitle(page),
-        originIndex = originIndex,
-        destinationIndex = originIndex + 1
+        destinationIndex = browserOriginIndex + 1
       ))
     } else {
       codec.decodeState(ev.state) match {
@@ -419,77 +474,104 @@ class Router[BasePage](
             } else {
               NavigationKind.Forward
             }
-          submitNavigation(new NavigationRequest[BasePage](
+          submitBrowserNavigation(new NavigationRequest[BasePage](
             page = destinationPage,
             kind = kind,
             relativeUrl = relativeUrl,
             pageTitle = getPageTitle(destinationPage),
-            originIndex = originIndex,
             destinationIndex = destinationNavigationIndex
           ))
         case None =>
           // Malformed history API state. We can't know its position in history,
           // so we treat it like a hash change: best-effort, assume forward.
           val page = codec.deserializeFallback(ev.state)
-          submitNavigation(new NavigationRequest[BasePage](
+          submitBrowserNavigation(new NavigationRequest[BasePage](
             page = page,
             kind = NavigationKind.HashChange, // #TODO[block] Why HashChange?
             relativeUrl = relativeUrl,
             pageTitle = getPageTitle(page),
-            originIndex = originIndex,
-            destinationIndex = originIndex + 1
+            destinationIndex = browserOriginIndex + 1
           ))
       }
     }
   }
 
-  private def submitNavigation(pending: NavigationRequest[BasePage]): Unit = {
-    pendingNavigationOpt match {
-      case Some(_) =>
-        // A navigation guard is already pending. Reject this new navigation outright:
-        //  - App-initiated navigations did not even touch the browser history yet, so we just drop them.
-        //  - Browser navigations have already happened, so we undo them immediately (no guard, no render).
-        pending.kind match {
-          case _: NavigationKind.RouterInitiated => ()
-          case _ => revertNavigation(pending)
+  /** Submits a navigation the browser has *already* performed, recording where it moved to
+    * before we decide whether to keep it.
+    */
+  private def submitBrowserNavigation(request: NavigationRequest[BasePage]): Unit = {
+    browserIndex = request.destinationIndex
+    submitNavigation(request)
+  }
+
+  private def submitNavigation(request: NavigationRequest[BasePage]): Unit = {
+    // Last one wins: a navigation requested while another awaits the guard supersedes it, rather
+    // than being dropped in its favour. This matches other SPA routers (Vue Router reports the
+    // loser as a `cancelled` failure, Angular as a `NavigationCancel` event), and is what an app
+    // can work with: a guard is typically pending because a confirmation dialog is on screen, and
+    // whatever the user does next — Back, a link, an app redirect — must be able to take over.
+    // Dropping the newer request instead leaves the app wedged behind a question nobody answers.
+    pendingNavigationOpt.foreach(supersede)
+
+    val pending = new PendingNavigation(request)
+    pendingNavigationOpt = Some(pending)
+
+    // #Note: [[committedIndex]] stays put until this navigation commits, even for a browser
+    //  navigation that already moved the browser. It is what we undo back to if the guard says
+    //  no, so it must not follow the browser around in the meantime.
+
+    val nav = NavigationEvent[BasePage](
+      fromPage = currentPageSignal.now(),
+      toPage = request.page,
+      kind = request.kind,
+      toRelativeUrl = request.relativeUrl
+    )
+
+    Try(preventNavigation(nav)) match {
+      case Success(stream) =>
+        val subscription = stream.take(1).foreach(prevent => resolveNavigation(pending, prevent))(using owner)
+        // A synchronous guard (the common `EventStream.fromValue` case) has already resolved this
+        // navigation by now, before we ever got hold of its subscription.
+        if (pending.isResolved) {
+          subscription.kill()
+        } else {
+          pending.holdGuard(subscription)
         }
-
-      case None =>
-        pendingNavigationOpt = Some(pending)
-
-        // Mirror the browser's actual position while we wait for the guard to resolve.
-        //  - For push / replace, the browser has NOT moved yet, so internalIndex stays put until commit.
-        //  - For pop kinds, the browser has ALREADY moved, so update internalIndex now.
-        if (pending.kind != NavigationKind.Push && pending.kind != NavigationKind.Replace) {
-          navigationIndex = pending.destinationIndex
-        }
-
-        val nav = NavigationEvent[BasePage](
-          fromPage = currentPageSignal.now(),
-          toPage = pending.page,
-          kind = pending.kind,
-          toRelativeUrl = pending.relativeUrl
-        )
-
-        Try(preventNavigation(nav)) match {
-          case Success(stream) =>
-            stream.take(1).foreach(prevent => resolveNavigation(prevent))(owner)
-          case Failure(err) =>
-            AirstreamError.sendUnhandledError(err)
-            resolveNavigation(prevent = false) // fail open
-        }
+      case Failure(err) =>
+        AirstreamError.sendUnhandledError(err)
+        resolveNavigation(pending, prevent = false) // fail open
     }
   }
 
-  private def resolveNavigation(prevent: Boolean): Unit = {
-    val pending = pendingNavigationOpt.getOrElse(
-      throw new WaypointException("resolveNavigation does not have a pending navigation")
-    )
+  /** Abandons a pending navigation in favour of a newer one.
+    *
+    * Nothing is undone here. A superseded router-initiated navigation never touched the browser;
+    * a superseded browser-initiated one left the browser somewhere the navigation now replacing
+    * it is responsible for: another browser navigation has moved it on again, and a
+    * router-initiated one builds on wherever it now stands (see [[navigationRequestFromPage]])
+    * and brings it home if the guard refuses it (see [[restoreCommittedEntry]]).
+    */
+  private def supersede(pending: PendingNavigation[BasePage]): Unit = {
     pendingNavigationOpt = None
-    if (prevent) {
-      revertNavigation(pending)
-    } else {
-      commitNavigation(pending)
+    pending.resolve() // Any answer arriving from its guard after this point is ignored.
+  }
+
+  private def resolveNavigation(pending: PendingNavigation[BasePage], prevent: Boolean): Unit = {
+    // #Note The `isResolved` check upholds an invariant, not a known path: `take(1)` already
+    //  limits a guard to one answer, and killing a superseded navigation's subscription stops
+    //  its stream delivering one at all, even mid-propagation (Airstream defers the removal, but
+    //  on a stream no longer feeding anything). It is here so "a navigation is acted on at most
+    //  once" does not depend on both of those holding.
+    if (!pending.isResolved) {
+      pending.resolve()
+      if (pendingNavigationOpt.contains(pending)) {
+        pendingNavigationOpt = None
+      }
+      if (prevent) {
+        restoreCommittedEntry()
+      } else {
+        commitNavigation(pending.request)
+      }
     }
   }
 
@@ -498,7 +580,7 @@ class Router[BasePage](
       codec.encodeState(pending.destinationIndex, pending.page)
     pending.kind match {
       case NavigationKind.Push =>
-        navigationIndex = pending.destinationIndex
+        setCommittedEntry(pending)
         dom.window.history.pushState(
           statedata = encodedState,
           title = pending.pageTitle,
@@ -506,7 +588,7 @@ class Router[BasePage](
         )
 
       case NavigationKind.Replace =>
-        navigationIndex = pending.destinationIndex
+        setCommittedEntry(pending)
         dom.window.history.replaceState(
           statedata = encodedState,
           title = pending.pageTitle,
@@ -515,7 +597,7 @@ class Router[BasePage](
 
       case NavigationKind.HashChange =>
         // Re-stamp the browser-created entry so that future back / forward to it can be detected
-        navigationIndex = pending.destinationIndex
+        setCommittedEntry(pending)
         dom.window.history.replaceState(
           statedata = encodedState,
           title = pending.pageTitle,
@@ -523,30 +605,45 @@ class Router[BasePage](
         )
 
       case NavigationKind.Back | NavigationKind.Forward =>
-        () // Browser already performed the navigation; internalIndex was already updated when the request arrived.
+        // The browser already performed this navigation, so there is nothing to write; we just
+        // adopt the position it moved to as our own.
+        setCommittedEntry(pending)
     }
 
     replacePageTitle(pending.pageTitle)
     pageBus.emit(pending.page)
   }
 
-  private def revertNavigation(pending: NavigationRequest[BasePage]): Unit = {
-    pending.kind match {
-      case _: NavigationKind.RouterInitiated =>
-        () // We never wrote anything to history, so there is nothing to undo.
-
-      case NavigationKind.Back =>
-        navigationIndex = pending.originIndex
-        suppressNextPopState = true
-        dom.window.history.forward()
-
-      case NavigationKind.Forward | NavigationKind.HashChange =>
-        navigationIndex = pending.originIndex
-        suppressNextPopState = true
-        dom.window.history.back()
-    }
+  /** Records where we are now, and forgets any undo that was aiming at where we used to be. */
+  private def setCommittedEntry(pending: NavigationRequest[BasePage]): Unit = {
+    committedIndex = pending.destinationIndex
+    committedRelativeUrl = pending.relativeUrl
+    browserIndex = pending.destinationIndex
+    pendingUndoOpt = None
   }
 
+  /** Brings the browser back to the entry the app is on, undoing whatever move it made that we
+    * will not follow.
+    *
+    * It asks the same question whatever was refused — "where is the browser, and where should it
+    * be?" — rather than inverting a particular navigation. A refused Back is the obvious case,
+    * but a refused `pushState` needs it too: that push may have superseded a browser navigation,
+    * leaving the browser a step away from us even though the push wrote nothing. When the browser
+    * is already where it belongs (the usual case for a refused `pushState`), this does nothing.
+    *
+    * We move by the whole distance, not a step at a time. The browser can be several entries away
+    * — a user can jump several at once from the Back-button menu, and it keeps moving while a
+    * guard is pending. Stepping one at a time would get home eventually, but treat each entry it
+    * crosses as a fresh navigation: one guard consultation, so potentially one prompt, per entry.
+    * Going by delta is one traversal and one `popState`, however far we go.
+    */
+  private def restoreCommittedEntry(): Unit = {
+    val delta = committedIndex - browserIndex
+    if (delta != 0) { // .go(0) would reload the document – avoid that.
+      pendingUndoOpt = Some(new UndoExpectation(committedIndex, committedRelativeUrl))
+      dom.window.history.go(delta)
+    }
+  }
 
 
 }

@@ -1,7 +1,7 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
-import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.{AppPage, PerSuiteOwner, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage._
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
 import org.scalajs.dom
@@ -12,9 +12,8 @@ import urldsl.language.PathSegment
 import scala.scalajs.js
 import scala.util.Try
 
-class DynamicRouteSpec extends UnitSpec {
+class DynamicRouteSpec extends UnitSpec with PerSuiteOwner {
 
-  private val testOwner = new Owner {}
 
   // #TODO[Test] We use `localhost` instead of example.com because
   // the test framework instantiates JSDOM with this origin, and we
@@ -105,8 +104,8 @@ class DynamicRouteSpec extends UnitSpec {
   dom.window.history.pushState(new js.Object, "", "/app/library/700")
 
   val codec = new HistoryCodec[AppPage](
-    serializePage = page => write(page)(AppPage.rw),
-    deserializePage = pageStr => read(pageStr)(AppPage.rw),
+    serializePage = page => write(page),
+    deserializePage = pageStr => read[AppPage](pageStr),
   )
 
   val router: Router[AppPage] = new Router[AppPage](

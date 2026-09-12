@@ -3,6 +3,8 @@ package com.raquo.waypoint
 import com.raquo.airstream.core.Signal
 import com.raquo.airstream.state.Var
 
+import scala.annotation.nowarn
+
 /** The job of this renderer is to provide Signal[OutPage] => View
   * instead of the more obvious but less efficient Signal[OutPage] => Signal[View]
   *
@@ -16,8 +18,10 @@ sealed class CollectPageSignalRenderer[InPage, OutPage, +View] private[waypoint]
   // @TODO[Integrity] Because we don't have collect on Signal, this emits events in a different Transaction than the original page Signal.
   //  If / when we have Signal.collect, we should re-implement this in its terms.
 
-  private[this] var signalVar: Var[OutPage] = null
+  private var signalVar: Var[OutPage] = null
 
+  // Can't remove [this] due to Scala 2.x variance rules
+  @nowarn("msg=Ignoring \\[this\\] qualifier")
   private[this] var currentView: Option[View] = None
 
   override def render(rawNextPage: InPage): Option[View] = {

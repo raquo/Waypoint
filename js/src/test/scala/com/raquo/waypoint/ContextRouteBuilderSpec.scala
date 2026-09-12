@@ -54,8 +54,8 @@ with PerTestOwner {
     // Set initial URL
     dom.window.history.pushState(new js.Object, "", "/app/library/700")
     val codec = new HistoryCodec[PageBundle](
-      serializePage = page => write(page)(PageBundle.rw),
-      deserializePage = pageStr => read(pageStr)(PageBundle.rw),
+      serializePage = page => write(page),
+      deserializePage = pageStr => read[PageBundle](pageStr),
     )
     new Router[PageBundle](
       routes = libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil,

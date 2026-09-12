@@ -1,7 +1,7 @@
 package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
-import com.raquo.waypoint.fixtures.AppPage
+import com.raquo.waypoint.fixtures.{AppPage, PerSuiteOwner}
 import com.raquo.waypoint.fixtures.AppPage._
 import org.scalajs.dom
 import upickle.default._
@@ -9,9 +9,8 @@ import upickle.default._
 import scala.scalajs.js
 import scala.util.Try
 
-class StaticRouteSpec extends JsUnitSpec {
+class StaticRouteSpec extends JsUnitSpec with PerSuiteOwner {
 
-  private val testOwner = new Owner {}
 
   it("matches simple url") {
 
@@ -23,8 +22,8 @@ class StaticRouteSpec extends JsUnitSpec {
     dom.window.history.pushState(new js.Object, "", "/")
 
     val codec = new HistoryCodec[AppPage](
-      serializePage = page => write(page)(AppPage.rw),
-      deserializePage = pageStr => read(pageStr)(AppPage.rw),
+      serializePage = page => write(page),
+      deserializePage = pageStr => read[AppPage](pageStr),
     )
 
     val router = new Router[AppPage](

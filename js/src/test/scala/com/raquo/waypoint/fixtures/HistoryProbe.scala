@@ -16,10 +16,19 @@ object HistoryProbe {
   val defaultTimeoutMs: Double = 2000
 
   /** Default quiet period observed after the expected `popstate` events, to catch unexpected
-    * extra ones. Costs this much per [[afterPopStates]] call, which is worth it: the events it
-    * catches are ones the end-state assertions can not see.
+    * extra ones. Costs this much per [[afterPopStates]] call, worth it: the events it catches
+    * are ones the end-state assertions can not see.
     */
-  val defaultSettleMs: Double = 20
+  val defaultSettleMs: Double = 50
+
+  /** Default quiet period for [[afterPopStatesSettle]], which must outlast a traversal the
+    * browser defers rather than one it cascades.
+    *
+    * Measured: with two `history.back()` calls queued together, Chrome drops the first undo the
+    * router requests and delivers the second's `popstate` 11-21ms after the burst's last event.
+    * A 20ms window sat right on that boundary and flaked; this leaves real margin.
+    */
+  val defaultBurstQuietMs: Double = 100
 
   /** Absolute URL of the current history entry, e.g. "http://localhost:52341/signup/test". */
   def url: String = dom.window.location.href
@@ -114,6 +123,65 @@ object HistoryProbe {
         promise.tryFailure(
           new AssertionError(
             s"Timed out after ${timeoutMs.toInt}ms waiting for $count popstate event(s), saw $seen. Current URL: $url"
+          )
+        )
+        ()
+      }
+    )
+
+    action
+
+    promise.future
+  }
+
+  /** Runs `action` and resolves, with the number of `popstate` events seen, once none has
+    * arrived for `quietMs`.
+    *
+    * For bursts, where the exact count is not predictable: the browser may coalesce traversals
+    * queued in the same tick, and deliver no event at all for one it merged away. Such a test
+    * asserts on the state the burst settles into, not on how many events it took to get there.
+    *
+    * Never settling is itself the failure to catch — an undo the router does not recognize as
+    * its own becomes an endless bounce — so the overall timeout is what reports it.
+    */
+  def afterPopStatesSettle(
+    quietMs: Double = defaultBurstQuietMs,
+    timeoutMs: Double = defaultTimeoutMs
+  )(
+    action: => Unit
+  ): Future[Int] = {
+    val promise = Promise[Int]()
+    var seen = 0
+    var quietHandle: Option[timers.SetTimeoutHandle] = None
+    var timeoutHandle: Option[timers.SetTimeoutHandle] = None
+
+    def stopListening(handler: js.Function1[dom.PopStateEvent, Unit]): Unit = {
+      dom.window.removeEventListener("popstate", handler)
+      quietHandle.foreach(timers.clearTimeout)
+      timeoutHandle.foreach(timers.clearTimeout)
+    }
+
+    lazy val handler: js.Function1[dom.PopStateEvent, Unit] = { _ =>
+      seen += 1
+      quietHandle.foreach(timers.clearTimeout)
+      quietHandle = Some(
+        timers.setTimeout(quietMs) {
+          stopListening(handler)
+          promise.trySuccess(seen)
+          ()
+        }
+      )
+    }
+
+    dom.window.addEventListener("popstate", handler)
+
+    timeoutHandle = Some(
+      timers.setTimeout(timeoutMs) {
+        stopListening(handler)
+        promise.tryFailure(
+          new AssertionError(
+            s"popstate events never stopped arriving within ${timeoutMs.toInt}ms (seen: $seen) — " +
+              s"the router is most likely bouncing between history entries. Current URL: $url"
           )
         )
         ()

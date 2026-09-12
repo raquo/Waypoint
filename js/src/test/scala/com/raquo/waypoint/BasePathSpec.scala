@@ -2,7 +2,7 @@ package com.raquo.waypoint
 
 import com.raquo.airstream.ownership.Owner
 import com.raquo.laminar.api._
-import com.raquo.waypoint.fixtures.{AppPage, UnitSpec}
+import com.raquo.waypoint.fixtures.{AppPage, PerSuiteOwner, UnitSpec}
 import com.raquo.waypoint.fixtures.AppPage.{LibraryPage, _}
 import com.raquo.waypoint.fixtures.AppPage.DocsSection._
 import org.scalajs.dom
@@ -11,9 +11,8 @@ import upickle.default._
 import scala.scalajs.js
 import scala.util.Try
 
-class BasePathSpec extends UnitSpec {
+class BasePathSpec extends UnitSpec with PerSuiteOwner {
 
-  private val testOwner = new Owner {}
 
   List(
     "http://example.com",
@@ -147,8 +146,8 @@ class BasePathSpec extends UnitSpec {
         dom.window.history.pushState(new js.Object, "", s"${basePath}/app/library/700")
 
         val codec = new HistoryCodec[AppPage](
-          serializePage = page => write(page)(AppPage.rw),
-          deserializePage = pageStr => read(pageStr)(AppPage.rw),
+          serializePage = page => write(page),
+          deserializePage = pageStr => read[AppPage](pageStr),
         )
 
         val router = new Router[AppPage](

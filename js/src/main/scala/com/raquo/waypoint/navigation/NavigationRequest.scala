@@ -1,10 +1,9 @@
-package com.raquo.waypoint
+package com.raquo.waypoint.navigation
 
 private[waypoint] class NavigationRequest[Page](
   val page: Page,
   val kind: NavigationKind,
   val relativeUrl: String,
   val pageTitle: String,
-  val originIndex: Int,
   val destinationIndex: Int
 )

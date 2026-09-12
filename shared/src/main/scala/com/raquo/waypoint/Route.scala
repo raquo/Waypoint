@@ -281,7 +281,7 @@ object Route {
   def onlyFragment[Page: ClassTag, FragmentArgs](
     encode: Page => FragmentArgs,
     decode: FragmentArgs => Page,
-    pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, _, FragmentArgs, DummyError], // #TODO[Integrity] Not sure if `_` is strictly correct.
+    pattern: PathQueryFragmentRepr[Unit, DummyError, Unit, ?, FragmentArgs, DummyError], // #TODO[Integrity] Not sure if `?` is strictly correct.
     basePath: String = ""
   ): Total[Page, FragmentArgs] = {
     new Total(
@@ -320,7 +320,7 @@ object Route {
   def withFragment[Page: ClassTag, PathArgs, FragmentArgs](
     encode: Page => FragmentPatternArgs[PathArgs, Unit, FragmentArgs],
     decode: FragmentPatternArgs[PathArgs, Unit, FragmentArgs] => Page,
-    pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, _, FragmentArgs, DummyError], // #TODO[Integrity] Not sure if `_` is strictly correct.
+    pattern: PathQueryFragmentRepr[PathArgs, DummyError, Unit, ?, FragmentArgs, DummyError], // #TODO[Integrity] Not sure if `?` is strictly correct.
     basePath: String = ""
   ): Total[Page, FragmentPatternArgs[PathArgs, Unit, FragmentArgs]] = {
     new Total(

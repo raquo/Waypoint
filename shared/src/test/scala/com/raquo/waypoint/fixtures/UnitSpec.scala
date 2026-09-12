@@ -11,7 +11,7 @@ import scala.util.{Success, Try}
 trait UnitSpec extends AnyFunSpec with Matchers {
 
   def expectPageAbsolute[P](
-    route: Route[_, _],
+    route: Route[?, ?],
     origin: String,
     url: String,
     expectedPage: Option[P]
@@ -22,7 +22,7 @@ trait UnitSpec extends AnyFunSpec with Matchers {
   }
 
   def expectPageRelative[P](
-    route: Route[_, _],
+    route: Route[?, ?],
     origin: String,
     url: String,
     expectedPage: Option[P]
@@ -33,7 +33,7 @@ trait UnitSpec extends AnyFunSpec with Matchers {
   }
 
   def expectPageAbsoluteFailure(
-    route: Route[_, _],
+    route: Route[?, ?],
     origin: String,
     url: String
   )(implicit
@@ -43,7 +43,7 @@ trait UnitSpec extends AnyFunSpec with Matchers {
   }
 
   def expectPageRelativeFailure(
-    route: Route[_, _],
+    route: Route[?, ?],
     origin: String,
     url: String
   )(implicit

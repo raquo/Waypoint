@@ -1,5 +1,7 @@
 package com.raquo.waypoint
 
+import com.raquo.waypoint.navigation.NavigationKind
+
 /**
   * @param fromPage       the page the app is currently showing (the page we'd navigate away from)
   * @param toPage         the page the app would navigate to

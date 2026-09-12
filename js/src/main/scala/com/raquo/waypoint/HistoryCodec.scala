@@ -36,15 +36,29 @@ class HistoryCodec[BasePage](
   def decodeState(state: Any): Option[(Int, BasePage)] = {
     (state: Any) match {
       case stateStr: String =>
+        decodeIndex(stateStr).map { idx =>
+          val separatorIndex = stateStr.indexOf('|')
+          val decodedPageTry =
+            Try(deserializePage(stateStr.substring(separatorIndex + 1)))
+          idx -> decodedPageTry.getOrElse(deserializeFallback(state))
+        }
+      case _ =>
+        None
+    }
+  }
+
+  /** (rawHistoryApiState -> Option(navigationIndex)
+    *
+    * Reads only the index, never the page. Lets the router recognize the entry an undo
+    * lands on, without running the app's deserialization — which must not throw here, as
+    * the default [[HistoryCodec.throwOnInvalidState]] fallback otherwise would.
+    */
+  def decodeIndex(state: Any): Option[Int] = {
+    (state: Any) match {
+      case stateStr: String =>
         val separatorIndex = stateStr.indexOf('|')
         if (separatorIndex > 0) {
-          val navigationIndexOpt =
-            stateStr.substring(0, separatorIndex).toIntOption
-          navigationIndexOpt.map { idx =>
-            val decodedPageTry =
-              Try(deserializePage(stateStr.substring(separatorIndex + 1)))
-            idx -> decodedPageTry.getOrElse(deserializeFallback(state))
-          }
+          stateStr.substring(0, separatorIndex).toIntOption
         } else {
           None
         }

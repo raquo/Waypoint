@@ -9,7 +9,7 @@ import org.scalatest.{Assertion, Suite}
 import org.scalatest.matchers.should.Matchers
 import upickle.default._
 
-import scala.scalajs.js
+
 
 /** Routes, a router factory, and whole-state assertions shared by the navigation specs.
   *
@@ -48,7 +48,7 @@ with PerTestOwner { this: Suite =>
 
   protected val signupRoute: Route[SignupPage.type, Unit] = Route.static(SignupPage, root / "signup" / "test")
 
-  protected val routes: List[Route[_ <: AppPage, _]] =
+  protected val routes: List[Route[? <: AppPage, ?]] =
     libraryRoute :: textRoute :: noteRoute :: searchRoute :: loginRoute :: signupRoute :: Nil
 
   /** Real origin of the test page. Under Selenium it includes the port of the server that serves
@@ -56,20 +56,23 @@ with PerTestOwner { this: Suite =>
     */
   protected lazy val origin: String = dom.window.location.origin
 
-  protected def serializePage(page: AppPage): String = write(page)(AppPage.rw)
+  protected def serializePage(page: AppPage): String = write(page)
 
   protected def makeRouter(
     preventNavigation: NavigationEvent[AppPage] => EventStream[Boolean] = _ => EventStream.fromValue(false),
-    routeFallback: String => AppPage = url => throw new Exception(s"Test router has no route for URL: $url")
+    routeFallback: String => AppPage = url => throw new Exception(s"Test router has no route for URL: $url"),
+    initialRelativeUrl: String = "/app/library/700"
   ): Router[AppPage] = {
-    // Establish a known starting URL. `pushState` also drops any forward entries left over from a
-    // previous test, so every test starts at the end of the session history, where `history.back()`
-    // is available and `history.forward()` is not.
-    dom.window.history.pushState(new js.Object, "", "/app/library/700")
+    // Establish a known starting URL. `pushState` also drops any forward entries left over from
+    // a previous test, so every test starts at the end of the session history, where
+    // `history.back()` is available and `history.forward()` is not.
+    // `null` state, like a real page load: the router stamps this entry itself if the URL
+    // matches a route, and leaves it unstamped if it does not.
+    dom.window.history.pushState(null, "", initialRelativeUrl)
 
     val codec = new HistoryCodec[AppPage](
       serializePage = serializePage,
-      deserializePage = pageStr => read(pageStr)(AppPage.rw),
+      deserializePage = pageStr => read[AppPage](pageStr),
     )
 
     new Router[AppPage](

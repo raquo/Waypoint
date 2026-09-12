@@ -12,7 +12,7 @@ class PageSpec extends UnitSpec {
 
     write[AppPage](TextPage("abc123")) shouldBe "{\"$type\":\"com.raquo.waypoint.fixtures.AppPage.TextPage\",\"text\":\"abc123\"}"
 
-    write[AppPage](HomePage)(AppPage.rw) shouldBe "\"com.raquo.waypoint.fixtures.AppPage.HomePage\""
+    write[AppPage](HomePage)(using AppPage.rw) shouldBe "\"com.raquo.waypoint.fixtures.AppPage.HomePage\""
 
   }
 }

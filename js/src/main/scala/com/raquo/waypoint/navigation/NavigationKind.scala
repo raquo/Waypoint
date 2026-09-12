@@ -1,4 +1,4 @@
-package com.raquo.waypoint
+package com.raquo.waypoint.navigation
 
 sealed trait NavigationKind
 
